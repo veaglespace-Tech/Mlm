@@ -1,0 +1,7 @@
+z_db.php
+User/z_db.php
+User/admin/z_db.php
+User/admin/backups/
+_backup_before_production_update_*/
+scratch/
+.env
