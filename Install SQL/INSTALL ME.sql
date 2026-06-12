@@ -53,15 +53,14 @@ CREATE TABLE IF NOT EXISTS `affiliateuser` (
   `ifsccode` varchar(100) NOT NULL DEFAULT 'Not Available',
   `getpayment` int(11) NOT NULL DEFAULT '1',
   `renew` int(1) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `affiliateuser`
 --
 
 INSERT INTO `affiliateuser` (`Id`, `username`, `password`, `fname`, `address`, `email`, `referedby`, `ipaddress`, `mobile`, `active`, `doj`, `country`, `tamount`, `payment`, `signupcode`, `level`, `pcktaken`, `launch`, `expiry`, `bankname`, `accountname`, `accountno`, `accounttype`, `ifsccode`, `getpayment`, `renew`) VALUES
-(1, 'adminadmin', '123123123', 'Full Admin Name', 'Address OF Company Or Individual', 'EmailofAdmin@Domain.com', 'none', 0, 0, 1, '0000-00-00', 'Country', 1265, '', '0', 1, 1, 0, '0000-00-00', 'Not Available', 'Not Available', 0, 0, 'Not Available', 1, 0),
-(2, 'Sumitsinghal', '123456789', 'sumit singhal', 'France Address', 'singhal.techie@gmail.com', 'adminadmin', 0, 9999999999, 0, '2015-09-19', 'India', 0, '', '1284892893', 2, 1, 0, '2018-06-14', 'Not Available', 'Not Available', 0, 0, 'Not Available', 1, 1);
+(1, 'adminadmin', '123123123', 'Full Admin Name', 'Address OF Company Or Individual', 'EmailofAdmin@Domain.com', 'none', 0, 0, 1, '0000-00-00', 'Country', 1265, '', '0', 1, 1, 0, '0000-00-00', 'Not Available', 'Not Available', 0, 0, 'Not Available', 1, 0);
 
 -- --------------------------------------------------------
 
@@ -269,25 +268,8 @@ CREATE TABLE IF NOT EXISTS `paypalpayments` (
   `gateway` varchar(25) NOT NULL
 ) ENGINE=MyISAM AUTO_INCREMENT=15 DEFAULT CHARSET=latin1;
 
---
 -- Dumping data for table `paypalpayments`
 --
-
-INSERT INTO `paypalpayments` (`id`, `orderid`, `transacid`, `price`, `currency`, `date`, `cod`, `renew`, `renacid`, `pckid`, `gateway`) VALUES
-(1, 2, 'C.O.D', 0, '', '2015-09-22', 1, 0, 0, 0, ''),
-(2, 2, 'C.O.D', 0, '', '2015-09-22', 1, 0, 0, 0, ''),
-(3, 2, 'C.O.D', 0, '', '2015-09-22', 1, 0, 0, 0, ''),
-(4, 2, 'C.O.D', 0, '', '2015-09-22', 1, 0, 0, 0, ''),
-(5, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 0, 0, 0, ''),
-(6, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 0, 0, 0, ''),
-(7, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 0, 0, 1, 'C.O.D'),
-(8, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 0, 0, 1, 'C.O.D'),
-(9, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 0, 0, 1, 'C.O.D'),
-(10, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 0, 0, 1, 'C.O.D'),
-(11, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 0, 0, 1, 'C.O.D'),
-(12, 2, 'C.O.D', 5, 'USD', '2015-09-22', 1, 1, 0, 0, ''),
-(13, 2, 'C.O.D', 5, 'USD', '2015-09-23', 1, 1, 0, 0, ''),
-(14, 2, 'C.O.D', 5, 'USD', '2015-09-23', 1, 1, 1, 0, '');
 
 -- --------------------------------------------------------
 
@@ -396,7 +378,7 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `affiliateuser`
 --
 ALTER TABLE `affiliateuser`
-  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+  MODIFY `Id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
 --
 -- AUTO_INCREMENT for table `banners`
 --
@@ -436,7 +418,7 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `paypalpayments`
 --
 ALTER TABLE `paypalpayments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1;
 --
 -- Table structure for table `products`
 --
@@ -463,3 +445,41 @@ INSERT INTO `products` (`id`, `name`, `description`, `icon`, `emoji`, `active`) 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payu_payments`
+--
+
+CREATE TABLE IF NOT EXISTS `payu_payments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `orderid` varchar(255) NOT NULL,
+  `transacid` text NOT NULL,
+  `price` double DEFAULT '0',
+  `currency` text NOT NULL,
+  `date` date NOT NULL,
+  `pckid` double NOT NULL,
+  `gateway` varchar(25) NOT NULL,
+  `cod` int(1) NOT NULL DEFAULT '0',
+  `renew` int(1) NOT NULL DEFAULT '0',
+  `renacid` int(9) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pairing_transactions`
+--
+
+CREATE TABLE IF NOT EXISTS `pairing_transactions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `gross_amount` decimal(10,2) NOT NULL,
+  `tds_amount` decimal(10,2) NOT NULL,
+  `net_amount` decimal(10,2) NOT NULL,
+  `pairs_count` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

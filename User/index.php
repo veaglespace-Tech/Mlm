@@ -29,6 +29,19 @@ $status= "NOTOK";}
 
 if($status=="OK"){
 
+// Check pending_registrations first
+$pendingRow = mlmp_pdo_fetch($pdo, "SELECT admin_approval_status FROM pending_registrations WHERE username = ?", [$username]);
+if ($pendingRow) {
+    if ($pendingRow['admin_approval_status'] === 'Rejected') {
+        header("Location: rejected.php?username=" . urlencode($username));
+        exit;
+    } else if ($pendingRow['admin_approval_status'] === 'Pending') {
+        $msg = "Your account is pending admin approval.";
+        $status = "NOTOK";
+    }
+}
+
+if ($status == "OK") {
 // Retrieve user details and verify the password in PHP so old plaintext
 // passwords can be migrated to password_hash without breaking login.
 $userRow = mlmp_pdo_fetch($pdo, "SELECT password FROM affiliateuser WHERE username = ? AND active = 1 AND level = 2 LIMIT 1", [$username]);
@@ -40,7 +53,7 @@ if ($userRow && mlmp_password_matches($password, $userRow['password'])) {
 
 if (($num) == 1) {
 
-mlmp_upgrade_password_hash($con, $username, $password, $storedPassword);
+mlmp_upgrade_password_hash($pdo, $username, $password, $storedPassword);
 session_start();
         // Set username session variable
         $_SESSION['username'] = $username;
@@ -60,7 +73,8 @@ $errormsg= "
                     <button type='button' class='close' data-dismiss='alert'>&times;</button>
                     <i class='fa fa-ban-circle'></i><strong>Please Fix Below Errors : </br></strong>Username And Password Does Not Match Or Your Account Is Inactive.</div>"; //printing error if found in validation
 				
-}} 
+}}
+}
 else {
         
 $errormsg= "
@@ -360,7 +374,10 @@ function googleTranslateElementInit() {
                 <i class="fa-solid fa-lock text-xs"></i>
               </span>
               <input type="password" id="password" name="password" placeholder="Enter your password" minlength="6" required
-                     class="custom-input w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none">
+                     class="custom-input w-full rounded-xl py-3 pl-10 pr-10 text-sm outline-none">
+              <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-custom hover:text-indigo-500 transition-colors duration-200 focus:outline-none cursor-pointer">
+                <i class="fa-regular fa-eye text-sm"></i>
+              </button>
             </div>
           </div>
 
@@ -391,5 +408,20 @@ function googleTranslateElementInit() {
 
 
 
+<script>
+function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
 </body>
 </html>

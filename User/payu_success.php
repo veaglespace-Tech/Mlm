@@ -5,7 +5,7 @@ if(!isset($_SESSION)){
 include_once("z_db.php");
 
 // Fetch username from GET/POST (simulation/direct redirect) or session (live fallback)
-$username = $_GET['username'] ?? $_POST['username'] ?? $_SESSION['reg_username'] ?? '';
+$username = $_POST['udf1'] ?? $_GET['username'] ?? $_POST['username'] ?? $_SESSION['reg_username'] ?? '';
 $txnid = $_POST['txnid'] ?? '';
 $amount = $_POST['amount'] ?? 1000.00;
 $productinfo = $_POST['productinfo'] ?? $_SESSION['selected_product'] ?? 'MLM Affiliate Digital Kit';
@@ -38,7 +38,8 @@ if (!$isSimulation) {
         exit;
     }
 
-    $reverseHashSequence = "$salt|$status|||||||||||$email|$firstname|$productinfo|$amount|$txnid|$merchantKey";
+    $udf1 = $_POST['udf1'] ?? '';
+    $reverseHashSequence = "$salt|$status||||||||||$udf1|$email|$firstname|$productinfo|$amount|$txnid|$merchantKey";
     $expectedHash = strtolower(hash('sha512', $reverseHashSequence));
     if ($postedHash === '' || !hash_equals($expectedHash, $postedHash)) {
         header("Location: payu_failure.php");
@@ -46,24 +47,137 @@ if (!$isSimulation) {
     }
 }
 
-// 1. Fetch user from database
-$queryUser = "SELECT Id, pcktaken FROM affiliateuser WHERE username = ?";
+// 1. Fetch user from database to check if already inserted (in case of page refresh)
+$queryUser = "SELECT Id, pcktaken, active, fname, email FROM affiliateuser WHERE username = ?";
 $stmtUser = $pdo->prepare($queryUser);
 $stmtUser->execute([$username]);
 $user = $stmtUser->fetch();
 
+// Insert the user ONLY if they don't exist yet (this means payment was successful and we can now create the entry)
 if (!$user) {
-    die("User registration record not found.");
+    // Fetch signup data from pending_registrations using username (solves SameSite cookie session drop issue)
+    $stmtPending = $pdo->prepare("SELECT * FROM pending_registrations WHERE username = ?");
+    $stmtPending->execute([$username]);
+    $pendingUser = $stmtPending->fetch();
+
+    if ($pendingUser) {
+        $ref = $pendingUser['referedby'];
+        
+        // Extreme Leg Spillover Placement detection OR Admin Multi-Board Logic
+        $sponsor = mlmp_pdo_fetch($pdo, "SELECT Id, level, default_leg, left_count, right_count FROM affiliateuser WHERE username = ? LIMIT 1", [$ref]);
+        $sponsorId = (int)($sponsor['Id'] ?? 0);
+        $parentId = $sponsorId;
+        $position = 'L'; // default fallback
+
+        if ($sponsorId > 0) {
+            if (isset($sponsor['level']) && (int)$sponsor['level'] === 1) {
+                // ADMIN MULTI-BOARD LOGIC (Unilevel pair system)
+                $stmtBoards = $pdo->prepare("SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC");
+                $stmtBoards->execute([$ref, $ref . '_bc_%']);
+                $boards = $stmtBoards->fetchAll();
+                
+                $placed = false;
+                $boardCount = count($boards);
+                foreach ($boards as $board) {
+                    $bId = (int)$board['Id'];
+                    $hasLeft = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'L'", [$bId]);
+                    if ($hasLeft == 0) {
+                        $parentId = $bId;
+                        $position = 'L';
+                        $placed = true;
+                        break;
+                    }
+                    $hasRight = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'R'", [$bId]);
+                    if ($hasRight == 0) {
+                        $parentId = $bId;
+                        $position = 'R';
+                        $placed = true;
+                        break;
+                    }
+                }
+                
+                if (!$placed) {
+                    // Create a new Admin Pair Board
+                    $newBoardNum = $boardCount + 1;
+                    $newBoardUsername = $ref . '_bc_' . $newBoardNum;
+                    
+                    $sqlVirtual = "INSERT INTO affiliateuser (username, password, fname, address, email, referedby, mobile, active, launch, parent_id, position, level) 
+                                   VALUES (?, 'VIRTUAL', 'Admin Board {$newBoardNum}', '', '', 'none', '', 1, 1, 0, NULL, 1)";
+                    mlmp_pdo_execute($pdo, $sqlVirtual, [$newBoardUsername]);
+                    
+                    $newVirtualNode = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE username = ?", [$newBoardUsername]);
+                    $parentId = (int)$newVirtualNode['Id'];
+                    $position = 'L';
+                }
+            } else {
+                // NORMAL USER EXTREME LEG SPILLOVER LOGIC
+                $prefLeg = $sponsor['default_leg'] ?? 'AUTO';
+                
+                if ($prefLeg === 'AUTO') {
+                    $lCount = (int)($sponsor['left_count'] ?? 0);
+                    $rCount = (int)($sponsor['right_count'] ?? 0);
+                    $prefLeg = ($rCount < $lCount) ? 'R' : 'L';
+                }
+                
+                $currentId = $sponsorId;
+                $found = false;
+                
+                while (!$found) {
+                    $child = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE parent_id = ? AND position = ? LIMIT 1", [$currentId, $prefLeg]);
+                    if ($child) {
+                        $currentId = (int)$child['Id'];
+                    } else {
+                        $parentId = $currentId;
+                        $position = $prefLeg;
+                        $found = true;
+                    }
+                }
+            }
+        }
+
+        $sql = "INSERT INTO affiliateuser(username, password, fname, address, email, referedby, ipaddress, mobile, active, doj, country, payment, signupcode, tamount, pcktaken, expiry, parent_id, position) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'PayU', ?, 0, ?, ?, ?, ?)";
+        mlmp_pdo_execute($pdo, $sql, [
+            $username,
+            $pendingUser['password'],
+            $pendingUser['fname'],
+            $pendingUser['address'],
+            $pendingUser['email'],
+            $pendingUser['referedby'],
+            $pendingUser['ipaddress'],
+            $pendingUser['mobile'],
+            $pendingUser['doj'],
+            $pendingUser['country'],
+            $pendingUser['signupcode'],
+            $pendingUser['pcktaken'],
+            $pendingUser['expiry'],
+            $parentId,
+            $position
+        ]);
+
+        // Clean up the pending record now that the user is officially registered
+        $stmtDeletePending = $pdo->prepare("DELETE FROM pending_registrations WHERE username = ?");
+        $stmtDeletePending->execute([$username]);
+
+        $stmtUser->execute([$username]);
+        $user = $stmtUser->fetch();
+    }
+}
+
+if (!$user) {
+    die("User registration record could not be created because session data was lost across the payment gateway. This happens if your browser blocks third-party cookies (SameSite). Please try again or contact support.");
 }
 
 $uaid = $user['id'] ?? $user['Id'] ?? null;
 $pcktaken = $user['pcktaken'] ?? 1;
 
-// 2. Activate user and propagate binary commission matching engine
-mlmp_launch_profile($pdo, $username);
-$queryActivate = "UPDATE affiliateuser SET payment = 'PayU' WHERE username = ?";
-$stmtActivate = $pdo->prepare($queryActivate);
-$stmtActivate->execute([$username]);
+if ($user['active'] == 0) {
+    // 2. Activate user and propagate binary commission matching engine
+    mlmp_launch_profile($pdo, $username);
+    $queryActivate = "UPDATE affiliateuser SET active = 1, payment = 'PayU' WHERE username = ?";
+    $stmtActivate = $pdo->prepare($queryActivate);
+    $stmtActivate->execute([$username]);
+}
 
 // Clean up captured session data
 unset($_SESSION['signup_data']);
@@ -86,6 +200,10 @@ if ($paymentCount == 0 && !empty($txnid)) {
     $userEmail = $user['email'] ?? '';
     
     if(!empty($userEmail)) {
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $basePath = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+
         $welcomeSubject = "Welcome to MLM Platform - Account Activated!";
         $welcomeMessage = '
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden;">

@@ -2,9 +2,44 @@
 if(!isset($_SESSION)){
     session_start();
 }
+// Prevent browser caching so txnid regenerates on Back button
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 include_once("z_db.php");
 
-// Safety check: if no registered username in session, redirect to signup
+// Safety check: if no registered username in session, try to recover from pending_registrations via retry_username
+$retry_user = $_GET['retry_username'] ?? '';
+if (!empty($retry_user)) {
+    ensure_pending_schema($pdo);
+    $stmt_recover = $pdo->prepare("SELECT * FROM pending_registrations WHERE username = ?");
+    $stmt_recover->execute([$retry_user]);
+    $recovered = $stmt_recover->fetch();
+    if ($recovered) {
+        $_SESSION['reg_username'] = $recovered['username'];
+        $_SESSION['signup_data'] = [
+            'fname' => $recovered['fname'],
+            'password' => $recovered['password'],
+            'email' => $recovered['email'],
+            'mobile' => $recovered['mobile'],
+            'address' => $recovered['address'],
+            'country' => $recovered['country'],
+            'referedby' => $recovered['referedby'],
+            'ipaddress' => $recovered['ipaddress'],
+            'doj' => $recovered['doj'],
+            'signupcode' => $recovered['signupcode'],
+            'package' => $recovered['pcktaken'],
+            'expiry' => $recovered['expiry']
+        ];
+        
+        $stmt_pkg = $pdo->prepare("SELECT name FROM packages WHERE id = ?");
+        $stmt_pkg->execute([$recovered['pcktaken']]);
+        $pkg = $stmt_pkg->fetch();
+        $_SESSION['selected_product'] = $pkg ? $pkg['name'] : 'Membership Package';
+    }
+}
+
 if (!isset($_SESSION['reg_username'])) {
     header("Location: signup.php");
     exit;
@@ -22,83 +57,91 @@ $signup_data = $_SESSION['signup_data'];
 $firstname = $signup_data['fname'];
 $email = $signup_data['email'];
 $phone = $signup_data['mobile'];
-$amount = '1000.00';
+$package_id = $signup_data['package'] ?? 0;
+$stmt_pkg = $pdo->prepare("SELECT price FROM packages WHERE id = ?");
+$stmt_pkg->execute([$package_id]);
+$pkg_row = $stmt_pkg->fetch();
+$amount = $pkg_row ? number_format((float)$pkg_row['price'], 2, '.', '') : '1000.00';
 
-// Insert user securely into database before going to PayU (solves SameSite cookie session drop issue)
-$queryUser = "SELECT Id, pcktaken FROM affiliateuser WHERE username = ?";
-$stmtUser = $pdo->prepare($queryUser);
-$stmtUser->execute([$username]);
-$user = $stmtUser->fetch();
+// Ensure pending schema is created
+ensure_pending_schema($pdo);
 
-if (!$user && isset($_SESSION['signup_data'])) {
-    $ref = $signup_data['referedby'];
-    
-    // Dynamic BFS binary placement detection to prevent parent/child tree race conditions
-    $sponsor = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE username = ? LIMIT 1", [$ref]);
-    $sponsorId = (int)($sponsor['Id'] ?? 0);
-    $parentId = $sponsorId;
-    $position = 'L'; // default
-
-    if ($sponsorId > 0) {
-        $queue = [$sponsorId];
-        $found = false;
-        
-        while (!empty($queue) && !$found) {
-            $currentId = array_shift($queue);
-            
-            // Check children of $currentId
-            $children = mlmp_pdo_fetch_all($pdo, "SELECT Id, position FROM affiliateuser WHERE parent_id = ?", [$currentId]);
-            $hasL = false;
-            $hasR = false;
-            $lId = 0;
-            $rId = 0;
-            
-            foreach ($children as $child) {
-                if ($child['position'] == 'L') {
-                    $hasL = true;
-                    $lId = (int)$child['Id'];
-                } elseif ($child['position'] == 'R') {
-                    $hasR = true;
-                    $rId = (int)$child['Id'];
-                }
-            }
-            
-            if (!$hasL) {
-                $parentId = $currentId;
-                $position = 'L';
-                $found = true;
-            } elseif (!$hasR) {
-                $parentId = $currentId;
-                $position = 'R';
-                $found = true;
-            } else {
-                // Both slots taken, push them to queue to check their children later
-                // To maintain Top-to-Bottom, Left-to-Right order, push Left then Right
-                $queue[] = $lId;
-                $queue[] = $rId;
-            }
-        }
-    }
-
-    $sql = "INSERT INTO affiliateuser(username, password, fname, address, email, referedby, ipaddress, mobile, active, doj, country, payment, signupcode, tamount, pcktaken, expiry, parent_id, position) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'PayU', ?, 0, ?, ?, ?, ?)";
-    mlmp_pdo_execute($pdo, $sql, [
+// Insert user into pending_registrations (only if not already there, to avoid resetting status)
+if (isset($_SESSION['signup_data'])) {
+    $sql_pending = "INSERT IGNORE INTO pending_registrations(username, password, fname, address, email, referedby, mobile, country, ipaddress, doj, signupcode, pcktaken, expiry) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    mlmp_pdo_execute($pdo, $sql_pending, [
         $username,
         $signup_data['password'],
         $signup_data['fname'],
         $signup_data['address'],
         $signup_data['email'],
         $signup_data['referedby'],
-        $signup_data['ipaddress'],
         $signup_data['mobile'],
-        $signup_data['doj'],
         $signup_data['country'],
+        $signup_data['ipaddress'],
+        $signup_data['doj'],
         $signup_data['signupcode'],
-        $signup_data['package'],
-        $signup_data['expiry'],
-        $parentId,
-        $position
+        $package_id,
+        $signup_data['expiry']
     ]);
+}
+
+// Check if the sponsor is an Admin (level = 1)
+$is_admin_referral = false;
+$stmt_ref = $pdo->prepare("SELECT level FROM affiliateuser WHERE username = ?");
+$stmt_ref->execute([$signup_data['referedby']]);
+$ref_user = $stmt_ref->fetch();
+if ($ref_user && $ref_user['level'] == 1) {
+    $is_admin_referral = true;
+}
+
+$admin_approval_status = 'Pending';
+$stmt_app = $pdo->prepare("SELECT admin_approval_status FROM pending_registrations WHERE username = ?");
+$stmt_app->execute([$username]);
+$app_row = $stmt_app->fetch();
+if ($app_row) {
+    $admin_approval_status = $app_row['admin_approval_status'];
+}
+
+$is_admin_pending = ($is_admin_referral && $admin_approval_status !== 'Approved');
+
+// Send Initial Registration Email
+if (isset($_SESSION['signup_data']) && !isset($_SESSION['reg_email_sent'])) {
+    require_once "smtp_helper.php";
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $basePath = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+    
+    $regSubject = "Registration Received - Action Required";
+    if ($is_admin_pending) {
+        $statusText = "Pending Admin Approval";
+        $actionText = "Your sponsor is an Administrator. Your account is currently pending manual approval. You will be notified once approved to complete your payment.";
+        $actionBtn = "";
+    } else {
+        $statusText = "Pending Payment";
+        $actionText = "We have successfully received your registration details. To activate your account and start your journey, please complete your payment.";
+        $actionBtn = '<div style="text-align: center; margin-top: 30px;"><a href="' . $protocol . '://' . $host . $basePath . '/payu_payment.php?retry_username=' . urlencode($username) . '" style="background: #7c3aed; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; font-size: 16px;">Complete Payment</a></div>';
+    }
+
+    $regMessage = '
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden;">
+        <div style="background: #11162d; color: #fff; padding: 20px; text-align: center;">
+            <h2 style="margin: 0; font-size: 24px; color: #34d399;">Registration Received</h2>
+        </div>
+        <div style="padding: 30px; background: #fff; color: #333;">
+            <p style="font-size: 16px;">Hi <strong>' . htmlspecialchars($signup_data['fname']) . '</strong>,</p>
+            <p style="font-size: 16px; line-height: 1.5;">' . $actionText . '</p>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Username:</strong> ' . htmlspecialchars($username) . '</p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> ' . $statusText . '</p>
+            </div>
+            ' . $actionBtn . '
+        </div>
+    </div>';
+    
+    mlmp_send_mail($signup_data['email'], $regSubject, $regMessage);
+    $_SESSION['reg_email_sent'] = true; // prevent duplicate sending if they refresh
 }
 
 // Fetch PayU Credentials dynamically from database settings
@@ -117,7 +160,8 @@ $PAYU_BASE_URL = $isSandbox ? "https://test.payu.in/_payment" : "https://secure.
 
 $txnid = substr('MLMP' . strtoupper(hash('sha256', $username . random_int(100000, 999999) . microtime(true))), 0, 20);
 // PayU hosted checkout hash: sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt)
-$hashSequence = "$MERCHANT_KEY|$txnid|$amount|$productinfo|$firstname|$email|||||||||||$SALT";
+$udf1 = $username;
+$hashSequence = "$MERCHANT_KEY|$txnid|$amount|$productinfo|$firstname|$email|$udf1||||||||||$SALT";
 $hashV1 = strtolower(hash('sha512', $hashSequence));
 $hash = $hashV1;
 
@@ -125,7 +169,7 @@ $hash = $hashV1;
 if ($SALT_V2 !== '') {
     $hashPayload = ['v1' => $hashV1];
     if ($SALT_V2 !== '') {
-        $v2SignedString = "$MERCHANT_KEY|$txnid|$amount|$productinfo|$firstname|$email|||||||||||";
+        $v2SignedString = "$MERCHANT_KEY|$txnid|$amount|$productinfo|$firstname|$email|$udf1||||||||||";
         $hashPayload['v2'] = strtolower(hash_hmac('sha256', $v2SignedString, $SALT_V2));
     }
     $hash = json_encode($hashPayload, JSON_UNESCAPED_SLASHES);
@@ -231,52 +275,85 @@ $_layout_brand = 'MLM';
         </div>
         
         <div class="dash-panel-body" style="padding: 24px;">
-            <div style="text-align:center; margin-bottom:24px;">
-                <div style="color:var(--text-muted); font-size:13px; margin-bottom:8px;">Amount Payable</div>
-                <div style="color:var(--accent-green); font-size:32px; font-weight:800;">INR 1,000.00</div>
-            </div>
+            <?php if ($is_admin_pending): ?>
+                <div style="text-align:center; margin-bottom:24px;">
+                    <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:var(--accent-purple); color:white; font-size:24px; margin-bottom:16px; box-shadow:0 8px 24px rgba(124,58,237,0.3);">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <h3 style="color:var(--text-primary); font-size:20px; font-weight:800; margin-bottom:8px;">Pending Admin Approval</h3>
+                    <p style="color:var(--text-muted); font-size:14px; line-height:1.6;">
+                        Because you were referred directly by an Administrator, your account requires manual approval. 
+                        You will be notified via email to complete your payment once approved.
+                    </p>
+                </div>
 
-            <div style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding: 0 16px; margin-bottom:24px;">
-                <div class="info-row">
-                    <span class="info-label">Selected Kit</span>
-                    <span class="info-value"><?php echo htmlspecialchars($productinfo, ENT_QUOTES, 'utf-8'); ?></span>
+                <div style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding: 0 16px; margin-bottom:24px;">
+                    <div class="info-row">
+                        <span class="info-label">Selected Package</span>
+                        <span class="info-value"><?php echo htmlspecialchars($productinfo, ENT_QUOTES, 'utf-8'); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">User ID</span>
+                        <span class="info-value" style="color:var(--accent-purple);">@<?php echo htmlspecialchars($username, ENT_QUOTES, 'utf-8'); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Status</span>
+                        <span class="info-value" style="color:#f59e0b;">Waiting for Approval</span>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">User ID</span>
-                    <span class="info-value" style="color:var(--accent-purple);">@<?php echo htmlspecialchars($username, ENT_QUOTES, 'utf-8'); ?></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Name</span>
-                    <span class="info-value"><?php echo htmlspecialchars($firstname, ENT_QUOTES, 'utf-8'); ?></span>
-                </div>
-            </div>
 
-            <form action="<?php echo $PAYU_BASE_URL; ?>" method="post" name="payuForm">
-                <input type="hidden" name="key" value="<?php echo $MERCHANT_KEY; ?>" />
-                <input type="hidden" name="hash" value="<?php echo htmlspecialchars($hash, ENT_QUOTES, 'utf-8'); ?>" />
-                <input type="hidden" name="txnid" value="<?php echo $txnid; ?>" />
-                <input type="hidden" name="amount" value="<?php echo $amount; ?>" />
-                <input type="hidden" name="firstname" value="<?php echo htmlspecialchars($firstname, ENT_QUOTES, 'utf-8'); ?>" />
-                <input type="hidden" name="email" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'utf-8'); ?>" />
-                <input type="hidden" name="phone" value="<?php echo htmlspecialchars($phone, ENT_QUOTES, 'utf-8'); ?>" />
-                <input type="hidden" name="productinfo" value="<?php echo htmlspecialchars($productinfo, ENT_QUOTES, 'utf-8'); ?>" />
-                <input type="hidden" name="udf1" value="" />
-                <input type="hidden" name="udf2" value="" />
-                <input type="hidden" name="udf3" value="" />
-                <input type="hidden" name="udf4" value="" />
-                <input type="hidden" name="udf5" value="" />
-                <input type="hidden" name="surl" value="<?php echo htmlspecialchars($surl, ENT_QUOTES, 'utf-8'); ?>" />
-                <input type="hidden" name="furl" value="<?php echo htmlspecialchars($furl, ENT_QUOTES, 'utf-8'); ?>" />
-                <input type="hidden" name="curl" value="<?php echo htmlspecialchars($furl, ENT_QUOTES, 'utf-8'); ?>" />
+                <div style="text-align:center; color:var(--text-darker); font-size:13px; margin-top:16px;">
+                    You will be notified once the admin approves your account. <br>
+                    <a href="index.php" style="color:var(--accent-purple); font-weight:600; text-decoration:none; display:inline-block; margin-top:12px;">Return to Home</a>
+                </div>
+            <?php else: ?>
+                <div style="text-align:center; margin-bottom:24px;">
+                    <div style="color:var(--text-muted); font-size:13px; margin-bottom:8px;">Amount Payable</div>
+                    <div style="color:var(--accent-green); font-size:32px; font-weight:800;">INR <?php echo number_format((float)$amount, 2); ?></div>
+                </div>
+
+                <div style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding: 0 16px; margin-bottom:24px;">
+                    <div class="info-row">
+                        <span class="info-label">Selected Package</span>
+                        <span class="info-value"><?php echo htmlspecialchars($productinfo, ENT_QUOTES, 'utf-8'); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">User ID</span>
+                        <span class="info-value" style="color:var(--accent-purple);">@<?php echo htmlspecialchars($username, ENT_QUOTES, 'utf-8'); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Name</span>
+                        <span class="info-value"><?php echo htmlspecialchars($firstname, ENT_QUOTES, 'utf-8'); ?></span>
+                    </div>
+                </div>
+
+                <form action="<?php echo $PAYU_BASE_URL; ?>" method="post" name="payuForm">
+                    <input type="hidden" name="key" value="<?php echo $MERCHANT_KEY; ?>" />
+                    <input type="hidden" name="hash" value="<?php echo htmlspecialchars($hash, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="txnid" value="<?php echo $txnid; ?>" />
+                    <input type="hidden" name="amount" value="<?php echo $amount; ?>" />
+                    <input type="hidden" name="firstname" value="<?php echo htmlspecialchars($firstname, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="email" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="phone" value="<?php echo htmlspecialchars($phone, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="productinfo" value="<?php echo htmlspecialchars($productinfo, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="udf1" value="<?php echo htmlspecialchars($udf1, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="udf2" value="" />
+                    <input type="hidden" name="udf3" value="" />
+                    <input type="hidden" name="udf4" value="" />
+                    <input type="hidden" name="udf5" value="" />
+                    <input type="hidden" name="surl" value="<?php echo htmlspecialchars($surl, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="furl" value="<?php echo htmlspecialchars($furl, ENT_QUOTES, 'utf-8'); ?>" />
+                    <input type="hidden" name="curl" value="<?php echo htmlspecialchars($furl, ENT_QUOTES, 'utf-8'); ?>" />
+                    
+                    <button type="submit" class="pay-btn">
+                        <i class="fa-solid fa-lock"></i> Pay Securely via PayU
+                    </button>
+                </form>
                 
-                <button type="submit" class="pay-btn">
-                    <i class="fa-solid fa-lock"></i> Pay Securely via PayU
-                </button>
-            </form>
-            
-            <div style="text-align:center; color:var(--text-darker); font-size:12px; margin-top:16px;">
-                <i class="fa-solid fa-check-circle" style="color:var(--accent-green); margin-right:4px;"></i> 256-bit Secure Encryption
-            </div>
+                <div style="text-align:center; color:var(--text-darker); font-size:12px; margin-top:16px;">
+                    <i class="fa-solid fa-check-circle" style="color:var(--accent-green); margin-right:4px;"></i> 256-bit Secure Encryption
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

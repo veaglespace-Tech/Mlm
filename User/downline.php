@@ -6,13 +6,12 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Fetch user's package & currency info
-$urow = mysqli_fetch_array(mysqli_query($con, "SELECT pcktaken FROM affiliateuser WHERE username='" . $_SESSION['username'] . "'"));
+$urow = mlmp_pdo_fetch($pdo, "SELECT pcktaken FROM affiliateuser WHERE username=?", [$_SESSION['username']]);
 $pcktaken = $urow['pcktaken'] ?? 0;
 $pckcur = '';
 $l1=$l2=$l3=$l4=$l5=$l6=$l7=$l8=$l9=$l10 = 0;
 if ($pcktaken) {
-    $re = mysqli_query($con, "SELECT * FROM packages WHERE id=$pcktaken");
-    $r  = mysqli_fetch_array($re);
+    $r = mlmp_pdo_fetch($pdo, "SELECT * FROM packages WHERE id=?", [(int)$pcktaken]);
     if ($r) {
         $pckcur = $r['currency'];
         $l1=$r['level1']; $l2=$r['level2']; $l3=$r['level3'];  $l4=$r['level4'];
@@ -313,115 +312,31 @@ function render_member($fname, $username, $email, $doj, $active, $referred_by = 
 // ---- Build levels ----
 $levels = [];
 
-// Level 1
-$lv1 = []; $totalrefear1 = 0;
-$r1 = mysqli_query($con, "SELECT fname,email,doj,active,username,pcktaken FROM affiliateuser WHERE referedby='".$_SESSION['username']."'");
-while ($row = mysqli_fetch_array($r1)) {
-    $ac = $row['active']; $ll = 0;
-    $rp = mysqli_fetch_array(mysqli_query($con, "SELECT level1 FROM packages WHERE id=" . (int)$row['pcktaken']));
-    if ($rp) $ll = $rp['level1'];
-    if ($ac == 1) $totalrefear1 += $ll;
-    $lv1[] = ['fname'=>$row['fname'],'username'=>$row['username'],'email'=>$row['email'],'doj'=>$row['doj'],'active'=>$ac,'ref'=>''];
-}
-$levels[1] = ['members'=>$lv1,'earn'=>$totalrefear1];
-
-// Level 2
-$lv2 = []; $totalrefear2 = 0;
-$r1 = mysqli_query($con, "SELECT username,fname FROM affiliateuser WHERE referedby='".$_SESSION['username']."'");
-while ($row = mysqli_fetch_array($r1)) {
-    $r2 = mysqli_query($con, "SELECT fname,email,doj,active,username,pcktaken FROM affiliateuser WHERE referedby='".$row['username']."'");
-    while ($row2 = mysqli_fetch_array($r2)) {
-        $ac2 = $row2['active']; $ll2 = 0;
-        $rp = mysqli_fetch_array(mysqli_query($con, "SELECT level2 FROM packages WHERE id=".(int)$row2['pcktaken']));
-        if ($rp) $ll2 = $rp['level2'];
-        if ($ac2 == 1) $totalrefear2 += $ll2;
-        $lv2[] = ['fname'=>$row2['fname'],'username'=>$row2['username'],'email'=>$row2['email'],'doj'=>$row2['doj'],'active'=>$ac2,'ref'=>$row['fname']];
-    }
-}
-$levels[2] = ['members'=>$lv2,'earn'=>$totalrefear2];
-
-// Level 3
-$lv3 = []; $totalrefear3 = 0;
-$r1 = mysqli_query($con, "SELECT username FROM affiliateuser WHERE referedby='".$_SESSION['username']."'");
-while ($row = mysqli_fetch_array($r1)) {
-    $r2 = mysqli_query($con, "SELECT username,fname FROM affiliateuser WHERE referedby='".$row['username']."'");
-    while ($row2 = mysqli_fetch_array($r2)) {
-        $r3 = mysqli_query($con, "SELECT fname,email,doj,active,username,pcktaken FROM affiliateuser WHERE referedby='".$row2['username']."'");
-        while ($row3 = mysqli_fetch_array($r3)) {
-            $ac3=$row3['active']; $ll3=0;
-            $rp=mysqli_fetch_array(mysqli_query($con,"SELECT level3 FROM packages WHERE id=".(int)$row3['pcktaken']));
-            if($rp) $ll3=$rp['level3'];
-            if($ac3==1) $totalrefear3+=$ll3;
-            $lv3[] = ['fname'=>$row3['fname'],'username'=>$row3['username'],'email'=>$row3['email'],'doj'=>$row3['doj'],'active'=>$ac3,'ref'=>$row2['fname']];
-        }
-    }
-}
-$levels[3] = ['members'=>$lv3,'earn'=>$totalrefear3];
-
-// Level 4
-$lv4=[]; $te4=0;
-$r1=mysqli_query($con,"SELECT username FROM affiliateuser WHERE referedby='".$_SESSION['username']."'");
-while($row=mysqli_fetch_array($r1)){
- $r2=mysqli_query($con,"SELECT username FROM affiliateuser WHERE referedby='".$row['username']."'");
- while($row2=mysqli_fetch_array($r2)){
-  $r3=mysqli_query($con,"SELECT username FROM affiliateuser WHERE referedby='".$row2['username']."'");
-  while($row3=mysqli_fetch_array($r3)){
-   $r4=mysqli_query($con,"SELECT fname,email,doj,active,username,pcktaken FROM affiliateuser WHERE referedby='".$row3['username']."'");
-   while($row4=mysqli_fetch_array($r4)){
-    $ac=$row4['active'];$ll=0;
-    $rp=mysqli_fetch_array(mysqli_query($con,"SELECT level4 FROM packages WHERE id=".(int)$row4['pcktaken']));
-    if($rp)$ll=$rp['level4']; if($ac==1)$te4+=$ll;
-    $lv4[]=['fname'=>$row4['fname'],'username'=>$row4['username'],'email'=>$row4['email'],'doj'=>$row4['doj'],'active'=>$ac,'ref'=>$row3['username']];
-   }
-  }
- }
-}
-$levels[4]=['members'=>$lv4,'earn'=>$te4];
-
-// Level 5
-$lv5=[]; $te5=0;
-$r1=mysqli_query($con,"SELECT username FROM affiliateuser WHERE referedby='".$_SESSION['username']."'");
-while($row=mysqli_fetch_array($r1)){
- $r2=mysqli_query($con,"SELECT username FROM affiliateuser WHERE referedby='".$row['username']."'");
- while($row2=mysqli_fetch_array($r2)){
-  $r3=mysqli_query($con,"SELECT username FROM affiliateuser WHERE referedby='".$row2['username']."'");
-  while($row3=mysqli_fetch_array($r3)){
-   $r4=mysqli_query($con,"SELECT username FROM affiliateuser WHERE referedby='".$row3['username']."'");
-   while($row4=mysqli_fetch_array($r4)){
-    $r5=mysqli_query($con,"SELECT fname,email,doj,active,pcktaken FROM affiliateuser WHERE referedby='".$row4['username']."'");
-    while($row5=mysqli_fetch_array($r5)){
-     $ac=$row5['active'];$ll=0;
-     $rp=mysqli_fetch_array(mysqli_query($con,"SELECT level5 FROM packages WHERE id=".(int)$row5['pcktaken']));
-     if($rp)$ll=$rp['level5']; if($ac==1)$te5+=$ll;
-     $lv5[]=['fname'=>$row5['fname'],'username'=>$row5['username'],'email'=>$row5['email'],'doj'=>$row5['doj'],'active'=>$ac,'ref'=>$row4['username']];
-    }
-   }
-  }
- }
-}
-$levels[5]=['members'=>$lv5,'earn'=>$te5];
-
-function get_level_members($con, $user, $depth, $level_num) {
+function get_level_members_pdo($pdo, $user, $depth, $level_num) {
     $results = []; $earnings = 0;
     $stack = [['user'=>$user,'depth'=>0,'ref'=>'']];
     $visited = [];
     while (!empty($stack)) {
         $item = array_shift($stack);
         if ($item['depth'] == $depth - 1) {
-            $q = mysqli_query($con, "SELECT fname,email,doj,active,username,pcktaken FROM affiliateuser WHERE referedby='".mysqli_real_escape_string($con,$item['user'])."'");
-            while ($r = mysqli_fetch_array($q)) {
+            $stmt = $pdo->prepare("SELECT fname,email,doj,active,username,pcktaken FROM affiliateuser WHERE referedby=?");
+            $stmt->execute([$item['user']]);
+            while ($r = $stmt->fetch()) {
                 $ac = $r['active']; $ll = 0;
-                $rp = mysqli_fetch_array(mysqli_query($con,"SELECT level{$level_num} FROM packages WHERE id=".(int)$r['pcktaken']));
+                $rp = mlmp_pdo_fetch($pdo, "SELECT level{$level_num} FROM packages WHERE id=?", [(int)$r['pcktaken']]);
                 if ($rp) $ll = $rp["level{$level_num}"];
                 if ($ac == 1) $earnings += $ll;
                 $results[] = ['fname'=>$r['fname'],'username'=>$r['username'],'email'=>$r['email'],'doj'=>$r['doj'],'active'=>$ac,'ref'=>$item['user']];
             }
         } else {
-            $q = mysqli_query($con, "SELECT username FROM affiliateuser WHERE referedby='".mysqli_real_escape_string($con,$item['user'])."'");
-            while ($r = mysqli_fetch_array($q)) {
+            $stmt = $pdo->prepare("SELECT username, fname FROM affiliateuser WHERE referedby=?");
+            $stmt->execute([$item['user']]);
+            while ($r = $stmt->fetch()) {
                 if (!isset($visited[$r['username']])) {
                     $visited[$r['username']] = true;
-                    $stack[] = ['user'=>$r['username'],'depth'=>$item['depth']+1,'ref'=>$r['username']];
+                    // Provide the fname as ref for the next depth if needed (matches original logic for L2/L3)
+                    $refName = ($item['depth'] == 0) ? $r['fname'] : $r['username']; 
+                    $stack[] = ['user'=>$r['username'],'depth'=>$item['depth']+1,'ref'=>$refName];
                 }
             }
         }
@@ -429,8 +344,8 @@ function get_level_members($con, $user, $depth, $level_num) {
     return ['members'=>$results,'earn'=>$earnings];
 }
 
-foreach ([6,7,8,9,10] as $lnum) {
-    $levels[$lnum] = get_level_members($con, $_SESSION['username'], $lnum, $lnum);
+for ($i = 1; $i <= 10; $i++) {
+    $levels[$i] = get_level_members_pdo($pdo, $_SESSION['username'], $i, $i);
 }
 
 $total_network_earnings = 0;
@@ -440,12 +355,9 @@ foreach ($levels as $l) {
 
 // Tree logic
 $root_user = $_GET['user'] ?? $_SESSION['username'];
-$root_user_esc = mysqli_real_escape_string($con, $root_user);
-
-function getTreeData($con, $username, $current_depth, $max_depth) {
+function getTreeData($pdo, $username, $current_depth, $max_depth) {
     if ($current_depth > $max_depth) return null;
-    $user_query = mysqli_query($con, "SELECT Id, fname, username, active, left_count, right_count, position FROM affiliateuser WHERE username='$username'");
-    $user_data = mysqli_fetch_assoc($user_query);
+    $user_data = mlmp_pdo_fetch($pdo, "SELECT Id, fname, username, active, left_count, right_count, position FROM affiliateuser WHERE username=?", [$username]);
     if (!$user_data) return null;
     $node = [
         'id' => $user_data['Id'],
@@ -459,19 +371,19 @@ function getTreeData($con, $username, $current_depth, $max_depth) {
         'right' => null
     ];
     if ($current_depth < $max_depth) {
-        $children_query = mysqli_query($con, "SELECT username, position FROM affiliateuser WHERE parent_id=" . (int)$user_data['Id']);
-        while ($child = mysqli_fetch_assoc($children_query)) {
+        $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id=?", [(int)$user_data['Id']]);
+        foreach ($children as $child) {
             if ($child['position'] == 'L') {
-                $node['left'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);
+                $node['left'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth);
             } elseif ($child['position'] == 'R') {
-                $node['right'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);
+                $node['right'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth);
             }
         }
     }
     return $node;
 }
 
-$tree_data = getTreeData($con, $root_user_esc, 1, 4);
+$tree_data = getTreeData($pdo, $root_user, 1, 4);
 
 function renderNodeHTML($node, $pos_label = '', $has_children = false, $is_collapsed = false) {
     if (!$node) {

@@ -25,6 +25,10 @@ $pckmpay = (float)($_POST['pckmpay'] ?? 0);
 $pcksbonus = (float)($_POST['pcksbonus'] ?? 0);
 $pcktax = (float)($_POST['pcktax'] ?? 0);
 $renewdays = (int)($_POST['renewdays'] ?? 0);
+$binary_percent = (float)($_POST['binary_percent'] ?? 30);
+$sponsor_percent = (float)($_POST['sponsor_percent'] ?? 10);
+$capping_status = (int)($_POST['capping_status'] ?? 1);
+$capping_limit = (int)($_POST['capping_limit'] ?? 2);
 $levels = [];
 
 for ($i = 1; $i <= 20; $i++) {
@@ -51,17 +55,19 @@ if ($errors) {
 
 $sql = "INSERT INTO packages (
     name, price, currency, details, tax, mpay, sbonus, cdate, active,
+    binary_percent, sponsor_percent, capping_status, capping_limit,
     level1, level2, level3, level4, level5, level6, level7, level8, level9, level10,
     level11, level12, level13, level14, level15, level16, level17, level18, level19, level20,
     gateway, validity
 ) VALUES (
     ?, ?, ?, ?, ?, ?, ?, CURDATE(), 1,
+    ?, ?, ?, ?,
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
     0, ?
 )";
 
-$params = array_merge([$pname, $pprice, $pcurid, $pdetail, $pcktax, $pckmpay, $pcksbonus], $levels, [$renewdays]);
+$params = array_merge([$pname, $pprice, $pcurid, $pdetail, $pcktax, $pckmpay, $pcksbonus, $binary_percent, $sponsor_percent, $capping_status, $capping_limit], $levels, [$renewdays]);
 $created = mlmp_pdo_execute($pdo, $sql, $params);
 
 redirect_with_message($created ? "Package created successfully." : "Could not create package. Please try again.");

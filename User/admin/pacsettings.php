@@ -205,6 +205,39 @@ $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");
                             </div>
                         </div>
 
+                        <div class="mt-4 mb-2 border-b border-slate-100 pb-2">
+                            <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-percent text-blue-500 mr-1.5"></i> Binary & Sponsor Percentages</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Binary Match Commission (%)</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="30" name="binary_percent" required value="30">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Direct Sponsor Commission (%)</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="10" name="sponsor_percent" required value="10">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 mb-2 border-b border-slate-100 pb-2">
+                            <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-shield-halved text-red-500 mr-1.5"></i> Daily Capping Limits</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Daily Binary Capping Status</label>
+                                <select name="capping_status" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all h-[42px]" onchange="document.getElementById('create_capping_limit_container').style.display = this.value == '1' ? 'block' : 'none';">
+                                    <option value="1" class="bg-white">ON — Limit Daily Pairs</option>
+                                    <option value="0" class="bg-white">OFF — Unlimited (Danger!)</option>
+                                </select>
+                            </div>
+                            <div id="create_capping_limit_container">
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Daily Capping Limit (Pairs)</label>
+                                <input type="number" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="2" name="capping_limit" required value="2">
+                            </div>
+                        </div>
+
                         <!-- Matrix Settings -->
                         <div class="mt-4 mb-2 border-b border-slate-100 pb-2">
                             <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-sitemap text-purple-500 mr-1.5"></i> Matrix Levels (1 to 20)</h4>

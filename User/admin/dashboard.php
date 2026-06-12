@@ -13,10 +13,13 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 // Fetch admin user data safely using prepared statement
-$admin_row = mlmp_pdo_fetch($pdo, "SELECT id, fname, country, tamount FROM affiliateuser WHERE username = ?", [$_SESSION['adminidusername']]);
+$admin_row = mlmp_pdo_fetch($pdo, "SELECT id, fname, country FROM affiliateuser WHERE username = ?", [$_SESSION['adminidusername']]);
 $admin_name = $admin_row['fname'] ?? '';
 $admin_country = $admin_row['country'] ?? '';
-$admin_commission = (float)($admin_row['tamount'] ?? 0);
+
+// Admin Commission — sum of all unilevel pairs
+$admin_comm_row = mlmp_pdo_fetch($pdo, "SELECT SUM(tamount) as total_comm FROM affiliateuser WHERE username = ? OR username LIKE ?", [$_SESSION['adminidusername'], $_SESSION['adminidusername'] . '_bc_%']);
+$admin_commission = (float)($admin_comm_row['total_comm'] ?? 0);
 
 // Admin's Direct Referrals
 $admin_direct_refs = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE referedby = ?", [$_SESSION['adminidusername']]);
@@ -73,7 +76,11 @@ $settings_row = mlmp_pdo_fetch($pdo, "SELECT fblink, twitterlink FROM settings")
 $fblink = $settings_row['fblink'] ?? '';
 $twilink = $settings_row['twitterlink'] ?? '';
 
-// Admin collection logic removed as requested by user
+// Calculate Total Admin Collection (System TDS from payouts)
+$system_tds_row = mlmp_pdo_fetch($pdo, "SELECT SUM(tds_amount) as total_tds FROM pairing_transactions");
+$system_tds = (float)($system_tds_row['total_tds'] ?? 0);
+$total_admin_collection = $admin_commission + $system_tds;
+
 $page_title = 'Admin Dashboard';
 $active_nav = 'dashboard';
 $extra_head = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
@@ -85,12 +92,19 @@ include("layout_header.php");
 </div>
 
 <!-- Personal Stats Row -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
   <!-- Personal Commission -->
   <div class="bg-white border border-slate-200 border-l-4 border-l-purple-500 rounded-xl p-6 text-center shadow-sm relative overflow-hidden group hover:-translate-y-1 hover:shadow-md transition-all duration-300">
     <div class="absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
     <div class="text-3xl font-extrabold text-purple-600 mb-1 tracking-tight">INR <?php echo mlmp_escape(number_format($admin_commission, 2)); ?></div>
-    <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">My Commission Balance</div>
+    <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">My Affiliate Earnings</div>
+  </div>
+  
+  <!-- System Collection -->
+  <div class="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-xl p-6 text-center shadow-sm relative overflow-hidden group hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    <div class="text-3xl font-extrabold text-emerald-600 mb-1 tracking-tight">INR <?php echo mlmp_escape(number_format($total_admin_collection, 2)); ?></div>
+    <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">Total Admin Collection</div>
   </div>
   
   <!-- Personal Referrals -->

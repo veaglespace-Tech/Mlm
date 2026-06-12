@@ -233,6 +233,18 @@ $alwdpaypal = $gateway_paypal_row['status'] ?? 0;
     <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white border-none py-3 px-6 text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 mt-2 w-full md:w-auto self-start">
         <i class="fa-solid fa-floppy-disk"></i> Save All Platform Configurations
     </button>
+    <!-- Card 6: Database Factory Reset -->
+    <div class="bg-white border border-red-200 shadow-sm rounded-2xl shadow-xl flex flex-col overflow-hidden mt-6 border-l-4 border-l-red-500">
+        <div class="px-5 py-4 border-b border-red-100 bg-red-50 font-bold text-red-700 flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation"></i> Factory Reset System
+        </div>
+        <div class="p-6 flex flex-col gap-4">
+            <p class="text-sm text-slate-600 mb-2">If you are testing the system and want to securely wipe all member data, network tree, and payments to start completely fresh, use this tool. <strong>This is permanent and cannot be undone.</strong></p>
+            <a href="reset_system_db.php" class="inline-flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors w-max">
+                <i class="fa-solid fa-trash-can"></i> Perform Factory Reset
+            </a>
+        </div>
+    </div>
 </form>
 
 <?php include("layout_footer.php"); ?>

@@ -13,39 +13,7 @@ if (!isset($_SESSION['username'])) {
 }
 $payto = $_SESSION['username'];
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['todo']) && ($_POST['todo'] == "paymentpost")) {
-    $username = $_SESSION['username'];
-    $status = "OK";
-    $msg = "";
-
-    $uid_row = mlmp_pdo_fetch($pdo, "SELECT Id, pcktaken, tamount FROM affiliateuser WHERE username = ?", [$username]);
-    $uid = $uid_row['Id'] ?? 0;
-    $pc  = $uid_row['pcktaken'] ?? 0;
-    $nr  = (float)($uid_row['tamount'] ?? 0.0);
-
-    $mpay_row = mlmp_pdo_fetch($pdo, "SELECT mpay FROM packages WHERE id = ?", [$pc]);
-    $mpay = (float)($mpay_row['mpay'] ?? 0.0);
-
-    if ($nr <= 0) {
-        $msg = "You have no earnings to withdraw.";
-        $status = "NOTOK";
-    } elseif ($nr < $mpay) {
-        $msg = "You are not eligible for payment. Contact support for more info.";
-        $status = "NOTOK";
-    }
-
-    if ($status == "OK") {
-        mlmp_pdo_execute($pdo, "UPDATE affiliateuser SET tamount = 0 WHERE username = ?", [$username]);
-        $res1 = mlmp_pdo_execute($pdo, "INSERT INTO payments (userid, payment_amount, createdtime) VALUES (?, ?, NOW())", [$uid, $nr]);
-        if ($res1) {
-            $errormsg = "<div class='dash-alert success'><span>OK</span> Payment request sent! It will be processed after successful verification.</div>";
-        } else {
-            $errormsg = "<div class='dash-alert danger'><span>!</span> Technical issue. Please try again later or contact admin.</div>";
-        }
-    } else {
-        $errormsg = "<div class='dash-alert danger'><span>!</span> " . mlmp_escape($msg) . "</div>";
-    }
-}
+// The withdrawal processing logic has been moved securely to withdraw.php
 
 // Fetch chart data
 $ref_chart_data = [];
@@ -190,8 +158,9 @@ if ($acti != 1 || empty($launch_time)) {
                 </div>
               </div>';
     } else {
+        $db_now_row = mlmp_pdo_fetch($pdo, "SELECT NOW() as db_now");
+        $now = strtotime($db_now_row['db_now']);
         $lt = strtotime($launch_time);
-        $now = time();
         $hours_left = 24 - (($now - $lt) / 3600);
         
         if ($hours_left > 0) {
@@ -315,13 +284,12 @@ if ($acti != 1 || empty($launch_time)) {
         <div class="text-[13px] font-semibold text-green-600 mt-3">
           Congratulations! You have reached minimum payout.
         </div>
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="mt-2.5">
-          <input type="hidden" name="todo" value="paymentpost">
-          <button type="submit" class="inline-flex items-center gap-2 bg-gradient-to-br from-green-500 to-emerald-400 text-white border-none rounded-lg px-6 py-3 text-sm font-bold cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div class="mt-2.5">
+          <a href="withdraw.php" class="inline-flex items-center gap-2 bg-gradient-to-br from-green-500 to-emerald-400 text-white border-none rounded-lg px-6 py-3 text-sm font-bold cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md">
             <i class="fa-solid fa-paper-plane"></i>
-            Request Payment
-          </button>
-        </form>
+            Go to Withdrawals
+          </a>
+        </div>
       <?php elseif ($ear_val == 0 && $mpay_val == 0): ?>
         <div class="text-[13px] font-semibold text-slate-600 mt-3">
           Please purchase a package to unlock payouts, or earn commissions first.

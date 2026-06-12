@@ -31,6 +31,7 @@ $renewdays = (int)($_POST['renewdays'] ?? 0);
 $binary_percent = (float)($_POST['binary_percent'] ?? 30);
 $sponsor_percent = (float)($_POST['sponsor_percent'] ?? 10);
 $capping_limit = (int)($_POST['capping_limit'] ?? 10);
+$capping_status = (int)($_POST['capping_status'] ?? 1);
 
 $levels = [];
 
@@ -63,13 +64,13 @@ if ($errors) {
 
 $sql = "UPDATE packages SET
     name = ?, price = ?, currency = ?, details = ?, tax = ?, mpay = ?, sbonus = ?, active = ?,
-    binary_percent = ?, sponsor_percent = ?, capping_limit = ?,
+    binary_percent = ?, sponsor_percent = ?, capping_limit = ?, capping_status = ?,
     level1 = ?, level2 = ?, level3 = ?, level4 = ?, level5 = ?, level6 = ?, level7 = ?, level8 = ?, level9 = ?, level10 = ?,
     level11 = ?, level12 = ?, level13 = ?, level14 = ?, level15 = ?, level16 = ?, level17 = ?, level18 = ?, level19 = ?, level20 = ?,
     gateway = 0, validity = ?
     WHERE id = ?";
 
-$params = array_merge([$pname, $pprice, $pcurid, $pdetail, $pcktax, $pckmpay, $pcksbonus, $pact, $binary_percent, $sponsor_percent, $capping_limit], $levels, [$renewdays, $pidmain]);
+$params = array_merge([$pname, $pprice, $pcurid, $pdetail, $pcktax, $pckmpay, $pcksbonus, $pact, $binary_percent, $sponsor_percent, $capping_limit, $capping_status], $levels, [$renewdays, $pidmain]);
 $updated = mlmp_pdo_execute($pdo, $sql, $params);
 
 redirect_with_message($updated ? "Package updated successfully." : "Could not update package. Please try again.");

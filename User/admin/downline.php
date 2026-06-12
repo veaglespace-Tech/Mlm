@@ -21,6 +21,12 @@ if ($pcktaken) {
     }
 }
 
+if (isset($_GET['sync']) && $_GET['sync'] == '1') {
+    mlmp_recalculate_network_counts($pdo);
+    echo "<script>alert('Network counts synchronized successfully!'); window.location='downline.php?view=tree';</script>";
+    exit;
+}
+
 $page_title = "My Network";
 $active_nav = "downline";
 $extra_head = '
@@ -443,6 +449,8 @@ foreach ($levels as $l) {
 $root_user = $_GET['user'] ?? $_SESSION['adminidusername'];
 $root_user_esc = mysqli_real_escape_string($con, $root_user);
 
+
+
 function getTreeData($con, $username, $current_depth, $max_depth) {
     if ($current_depth > $max_depth) return null;
     $user_query = mysqli_query($con, "SELECT Id, fname, username, active, left_count, right_count, position FROM affiliateuser WHERE username='$username'");
@@ -457,15 +465,36 @@ function getTreeData($con, $username, $current_depth, $max_depth) {
         'right_count' => $user_data['right_count'],
         'position' => $user_data['position'],
         'left' => null,
-        'right' => null
+        'right' => null,
+        'unilevel_children' => []
     ];
     if ($current_depth < $max_depth) {
-        $children_query = mysqli_query($con, "SELECT username, position FROM affiliateuser WHERE parent_id=" . (int)$user_data['Id']);
-        while ($child = mysqli_fetch_assoc($children_query)) {
-            if ($child['position'] == 'L') {
-                $node['left'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);
-            } elseif ($child['position'] == 'R') {
-                $node['right'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);
+        if ($username === $_SESSION['adminidusername']) {
+            // Admin Unilevel Node: Gather children from all pairs (_bc_)
+            $admin_prefix = $_SESSION['adminidusername'] . '_bc_';
+            $pair_query = mysqli_query($con, "SELECT Id FROM affiliateuser WHERE username='$username' OR username LIKE '{$admin_prefix}%' ORDER BY Id ASC");
+            $pair_ids = [];
+            while ($p = mysqli_fetch_assoc($pair_query)) {
+                $pair_ids[] = (int)$p['Id'];
+            }
+            $ids_str = implode(',', $pair_ids);
+            
+            $children_query = mysqli_query($con, "SELECT username, position FROM affiliateuser WHERE parent_id IN ($ids_str) ORDER BY parent_id ASC, position ASC");
+            while ($child = mysqli_fetch_assoc($children_query)) {
+                $child_node = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);
+                if ($child_node) {
+                    $node['unilevel_children'][] = $child_node;
+                }
+            }
+        } else {
+            // Normal Binary Node
+            $children_query = mysqli_query($con, "SELECT username, position FROM affiliateuser WHERE parent_id=" . (int)$user_data['Id']);
+            while ($child = mysqli_fetch_assoc($children_query)) {
+                if ($child['position'] == 'L') {
+                    $node['left'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);
+                } elseif ($child['position'] == 'R') {
+                    $node['right'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);
+                }
             }
         }
     }
@@ -513,7 +542,7 @@ function renderNodeHTML($node, $pos_label = '', $has_children = false, $is_colla
 
 function renderTreeHTML($node, $depth = 1) {
     echo "<li>";
-    $has_children = ($node && (isset($node['left']) || isset($node['right'])));
+    $has_children = ($node && (isset($node['left']) || isset($node['right']) || !empty($node['unilevel_children'])));
     $is_collapsed = ($depth >= 2 && $has_children); // Level 1 (depth=1) is expanded, level 2 is collapsed
     
     echo renderNodeHTML($node, $node ? ($node['position'] ?: 'Root') : '', $has_children, $is_collapsed);
@@ -521,8 +550,16 @@ function renderTreeHTML($node, $depth = 1) {
     if ($node && $has_children) {
         $display = $is_collapsed ? 'style="display:none;"' : '';
         echo "<ul class='nested-tree' {$display}>";
-        renderTreeHTML($node['left'] ?? null, $depth + 1);
-        renderTreeHTML($node['right'] ?? null, $depth + 1);
+        if (!empty($node['unilevel_children'])) {
+            // Render Unilevel Children
+            foreach ($node['unilevel_children'] as $uchild) {
+                renderTreeHTML($uchild, $depth + 1);
+            }
+        } else {
+            // Render Binary Children
+            renderTreeHTML($node['left'] ?? null, $depth + 1);
+            renderTreeHTML($node['right'] ?? null, $depth + 1);
+        }
         echo "</ul>";
     }
     echo "</li>";
@@ -543,6 +580,7 @@ function renderTreeHTML($node, $depth = 1) {
                 <h3 class="text-sm font-bold text-slate-900 m-0">Binary Network Tree</h3>
             </div>
             <div class="flex items-center gap-3 flex-wrap">
+
                 <form method="GET" action="downline.php" class="flex items-center bg-white border border-slate-200 rounded-full px-3 py-1.5 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all shadow-inner max-w-[250px]">
                     <input type="hidden" name="view" value="tree">
                     <i class="fa-solid fa-search text-slate-400 text-xs mr-2"></i>
@@ -550,6 +588,7 @@ function renderTreeHTML($node, $depth = 1) {
                     <button type="submit" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold py-1 px-3 rounded-full transition-colors ml-2">Find</button>
                 </form>
                 <button onclick="collapseAllTree()" type="button" class="bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/20 px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5"><i class="fa-solid fa-compress"></i> Collapse All</button>
+                <button onclick="window.location='downline.php?sync=1'" type="button" class="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/20 px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5" title="Synchronize Network Counts"><i class="fa-solid fa-rotate"></i> Sync Counts</button>
                 <?php if ($root_user !== $_SESSION['adminidusername']): ?>
                     <a href="downline.php?view=tree" class="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 border border-indigo-500/20 px-3 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5 no-underline"><i class="fa-solid fa-arrow-left"></i> Back to Root</a>
                 <?php endif; ?>

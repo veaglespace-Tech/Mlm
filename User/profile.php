@@ -19,18 +19,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['todo']))
 
 
 // Collect the data from post method of form submission // 
-$name=mysqli_real_escape_string($con,$_POST['fullname'] ?? '');
-$address=mysqli_real_escape_string($con,$_POST['address'] ?? '');
-$cont=mysqli_real_escape_string($con,$_POST['contry'] ?? '');
-$p1=mysqli_real_escape_string($con,$_POST['p1'] ?? '');
-$p2=mysqli_real_escape_string($con,$_POST['p2'] ?? '');
-$bankname=mysqli_real_escape_string($con,$_POST['bankname'] ?? '');
-$email=mysqli_real_escape_string($con,$_POST['email'] ?? '');
-$accname=mysqli_real_escape_string($con,$_POST['accname'] ?? '');
-$accno=mysqli_real_escape_string($con,$_POST['accno'] ?? '');
-$ifsccode=mysqli_real_escape_string($con,$_POST['ifsccode'] ?? '');
-$alwdpayment=mysqli_real_escape_string($con,$_POST['alwdpayment'] ?? '');
-$acctype=mysqli_real_escape_string($con,$_POST['acctype'] ?? '');
+$name=$_POST['fullname'] ?? '';
+$address=$_POST['address'] ?? '';
+$cont=$_POST['contry'] ?? '';
+$p1=$_POST['p1'] ?? '';
+$p2=$_POST['p2'] ?? '';
+$bankname=$_POST['bankname'] ?? '';
+$email=$_POST['email'] ?? '';
+$accname=$_POST['accname'] ?? '';
+$accno=$_POST['accno'] ?? '';
+$ifsccode=$_POST['ifsccode'] ?? '';
+$alwdpayment=$_POST['alwdpayment'] ?? '';
+$acctype=$_POST['acctype'] ?? '';
+$default_leg=$_POST['default_leg'] ?? 'AUTO';
+if (!in_array($default_leg, ['L', 'R', 'AUTO'])) $default_leg = 'AUTO';
 //collection ends
 
 $check=1;
@@ -70,13 +72,19 @@ $status= "NOTOK";}
 if ($status=="OK") 
 {
 
-$passwordSql = "";
-if ($p1 !== "") {
-$hashedPassword = mysqli_real_escape_string($con, mlmp_hash_password($p1));
-$passwordSql = "password='$hashedPassword',";
-}
-$query=mysqli_query($con,"update affiliateuser set ".$passwordSql."fname='$name',address='$address',country='$cont',bankname='$bankname',accountname='$accname',accountno='$accno',accounttype='$acctype',ifsccode='$ifsccode',email='$email',getpayment='$alwdpayment' where username='".$_SESSION['username']."'");
+$sql = "UPDATE affiliateuser SET fname=?, address=?, country=?, bankname=?, accountname=?, accountno=?, accounttype=?, ifsccode=?, email=?, getpayment=?, default_leg=?";
+$params = [$name, $address, $cont, $bankname, $accname, $accno, $acctype, $ifsccode, $email, $alwdpayment, $default_leg];
 
+if ($p1 !== "") {
+    $hashedPassword = mlmp_hash_password($p1);
+    $sql .= ", password=?";
+    $params[] = $hashedPassword;
+}
+
+$sql .= " WHERE username=?";
+$params[] = $_SESSION['username'];
+
+mlmp_pdo_execute($pdo, $sql, $params);
 
 $errormsg= "<script>Swal.fire('Success!', 'Your profile has been updated.', 'success');</script>";
 
@@ -95,28 +103,27 @@ $errormsg= "<script>Swal.fire({title: 'Error!', html: 'Please Fix Below Errors: 
 }
 
 // Data fetch logic:
-$query="SELECT * FROM affiliateuser WHERE username='".$_SESSION['username']."'"; 
-$result = mysqli_query($con,$query);
+$row = mlmp_pdo_fetch($pdo, "SELECT * FROM affiliateuser WHERE username=?", [$_SESSION['username']]);
 $getpayment = '';
-while($row = mysqli_fetch_array($result))
+if($row)
 {
-	$name="$row[fname]";
-	$add="$row[address]";
-	$contry="$row[country]";
-	$email="$row[email]";
-	$bname="$row[bankname]";
-	$accnamee="$row[accountname]";
-	$accnumber="$row[accountno]";
-	$acctyppe="$row[accounttype]";
-	$ifsc="$row[ifsccode]";
-	$getpayment="$row[getpayment]";
+	$name=$row['fname'];
+	$add=$row['address'];
+	$contry=$row['country'];
+	$email=$row['email'];
+	$bname=$row['bankname'];
+	$accnamee=$row['accountname'];
+	$accnumber=$row['accountno'];
+	$acctyppe=$row['accounttype'];
+	$ifsc=$row['ifsccode'];
+	$getpayment=$row['getpayment'];
+	$default_leg_val=$row['default_leg'] ?? 'AUTO';
 }
 	
-$query121="SELECT * FROM settings"; 
-$result121 = mysqli_query($con,$query121);
-while($row121 = mysqli_fetch_array($result121))
+$row121 = mlmp_pdo_fetch($pdo, "SELECT * FROM settings");
+if($row121)
 {
-	$wlink="$row121[wlink]";
+	$wlink=$row121['wlink'];
 }
 $referral_url = mlmp_build_referral_url($wlink ?? '', $_SESSION['username']);
 
@@ -196,6 +203,17 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && ($status!=""))
             <input type="email" name="email" value="<?php print mlmp_escape($email) ?>" required
                    class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                    placeholder="E-Mail Address">
+          </div>
+
+          <!-- Default Placement Leg -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Default Placement Leg</label>
+            <select name="default_leg" required
+                    class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all h-[42px]">
+              <option value="AUTO" <?php echo (!isset($default_leg_val) || $default_leg_val == 'AUTO') ? 'selected' : ''; ?>>Auto (Weaker Leg)</option>
+              <option value="L" <?php echo (isset($default_leg_val) && $default_leg_val == 'L') ? 'selected' : ''; ?>>Extreme Left</option>
+              <option value="R" <?php echo (isset($default_leg_val) && $default_leg_val == 'R') ? 'selected' : ''; ?>>Extreme Right</option>
+            </select>
           </div>
 
           <!-- Country Selection Grid -->

@@ -28,7 +28,7 @@ $mobile = $_POST['mobile'] ?? $_SESSION['signup_data']['mobile'] ?? '';
 $ref = $_POST['referral'] ?? $_SESSION['signup_data']['referedby'] ?? $_GET['aff'] ?? '';
 $address = $_POST['address'] ?? $_SESSION['signup_data']['address'] ?? '';
 $country = $_POST['country'] ?? $_SESSION['signup_data']['country'] ?? '';
-$package = $_POST['package'] ?? $_SESSION['signup_data']['package'] ?? '';
+$country = $_POST['country'] ?? $_SESSION['signup_data']['country'] ?? '';
 
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
 {
@@ -45,6 +45,15 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
         $msg .= "User Id Should Contain Alphanumeric Chars Only.<BR>";
         $status = "NOTOK";
     }
+
+    // Clean up abandoned registrations (active = 0) that match the provided username, email, or mobile.
+    // This allows users to retry registration if their previous payment failed or they abandoned checkout.
+    $stmt_cleanup = $pdo->prepare("DELETE FROM affiliateuser WHERE active = 0 AND (username = ? OR email = ? OR mobile = ?)");
+    $stmt_cleanup->execute([$username, $email, $mobile]);
+
+    // Also clean up previously rejected records from pending_registrations so they can try again
+    $stmt_pending_cleanup = $pdo->prepare("DELETE FROM pending_registrations WHERE admin_approval_status = 'Rejected' AND (username = ? OR email = ? OR mobile = ?)");
+    $stmt_pending_cleanup->execute([$username, $email, $mobile]);
 
     if(mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE username = ?", [$username]) > 0){
         $msg .= "Userid Already Exists. Please Try Another One.<BR>";
@@ -66,10 +75,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
         $status = "NOTOK";
     }
 
-    if(empty($package)){
-        $msg .= "Please Select The Package.<BR>";
-        $status = "NOTOK";
-    }
+
 
     if(strlen($password) < 8){
         $msg .= "Password Must Be More Than 8 Char Length.<BR>";
@@ -115,7 +121,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
             'ipaddress' => $ip_long,
             'mobile' => $mobile,
             'country' => $country,
-            'package' => $package,
             'expiry' => $expiry,
             'signupcode' => $scode,
             'doj' => $cur_date
@@ -142,7 +147,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
 }
 
 $ref_id = $_GET['aff'] ?? $ref;
-$packages = mlmp_pdo_fetch_all($pdo, "SELECT id, name, price, currency FROM packages WHERE active = 1 ORDER BY price");
 ?>
 <!DOCTYPE html>
 <html lang="en" class="dark">
@@ -423,7 +427,10 @@ html, body {
                   <i class="fa-solid fa-lock text-xs"></i>
                 </span>
                 <input type="password" id="password" name="password" placeholder="Min 8 characters" minlength="8" required
-                       class="custom-input w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none">
+                       class="custom-input w-full rounded-xl py-3 pl-10 pr-10 text-sm outline-none">
+                <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-custom hover:text-indigo-500 transition-colors duration-200 focus:outline-none cursor-pointer">
+                  <i class="fa-regular fa-eye text-sm"></i>
+                </button>
               </div>
             </div>
 
@@ -435,7 +442,10 @@ html, body {
                   <i class="fa-solid fa-lock text-xs"></i>
                 </span>
                 <input type="password" id="password2" name="password2" placeholder="Repeat password" minlength="8" required
-                       class="custom-input w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none">
+                       class="custom-input w-full rounded-xl py-3 pl-10 pr-10 text-sm outline-none">
+                <button type="button" onclick="togglePasswordVisibility('password2', this)" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-custom hover:text-indigo-500 transition-colors duration-200 focus:outline-none cursor-pointer">
+                  <i class="fa-regular fa-eye text-sm"></i>
+                </button>
               </div>
             </div>
 
@@ -482,22 +492,7 @@ html, body {
               </div>
             </div>
 
-            <!-- Package Select -->
-            <div class="space-y-1.5">
-              <label class="text-xs font-bold uppercase tracking-wider text-muted-custom" for="package">Membership Package</label>
-              <div class="relative">
-                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-muted-custom pointer-events-none transition-colors duration-200">
-                  <i class="fa-solid fa-box text-xs"></i>
-                </span>
-                <select id="package" name="package" required
-                        class="custom-input w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none">
-                  <option value="">Select Package</option>
-                  <?php foreach($packages as $pkg): ?>
-                    <option value="<?php echo $pkg['id']; ?>" <?php if((string)$package === (string)$pkg['id']) echo "selected"; ?>><?php echo htmlspecialchars($pkg['name'], ENT_QUOTES, "utf-8"); ?> - <?php echo htmlspecialchars($pkg['currency'], ENT_QUOTES, "utf-8"); ?> <?php echo number_format((float)$pkg['price'], 2); ?></option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-            </div>
+
 
           </div>
 
@@ -533,5 +528,20 @@ html, body {
   </div>
 </main>
 
+<script>
+function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
 </body>
 </html>

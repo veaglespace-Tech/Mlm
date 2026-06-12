@@ -40,6 +40,7 @@ $validity = $row['validity'] ?? 0;
 $binary_percent = $row['binary_percent'] ?? 30;
 $sponsor_percent = $row['sponsor_percent'] ?? 10;
 $capping_limit = $row['capping_limit'] ?? 10;
+$capping_status = $row['capping_status'] ?? 1;
 
 $levels = [];
 for ($i = 1; $i <= 20; $i++) {
@@ -158,9 +159,17 @@ include("layout_header.php");
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Daily Binary Capping (Pairs)</label>
-                    <input type="number" value="<?php echo mlmp_escape($capping_limit); ?>" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="10" name="capping_limit" required>
-                    <small class="block mt-1 text-xs text-slate-600">Max number of pairs a user can earn from per day. Extra pairs flush.</small>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Daily Binary Capping Status</label>
+                    <select name="capping_status" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all h-[42px] mb-2" onchange="document.getElementById('capping_limit_container').style.display = this.value == '1' ? 'block' : 'none';">
+                        <option value="1" <?php if ($capping_status == 1) echo 'selected'; ?> class="bg-white">ON — Limit Daily Pairs</option>
+                        <option value="0" <?php if ($capping_status == 0) echo 'selected'; ?> class="bg-white">OFF — Unlimited (Danger!)</option>
+                    </select>
+
+                    <div id="capping_limit_container" style="display: <?php echo $capping_status == 1 ? 'block' : 'none'; ?>;">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Daily Capping Limit (Pairs)</label>
+                        <input type="number" value="<?php echo mlmp_escape($capping_limit); ?>" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="2" name="capping_limit" required>
+                        <small class="block mt-1 text-xs text-slate-600">Max number of pairs a user can earn from per day. Extra pairs flush.</small>
+                    </div>
                 </div>
 
                 <div>

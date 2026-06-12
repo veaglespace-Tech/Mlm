@@ -28,7 +28,7 @@ if ($adminRow && mlmp_password_matches($password, $adminRow['password'])) {
 }
 
 if (($num) == 1) {
-mlmp_upgrade_password_hash($con, $username, $password, $storedPassword);
+mlmp_upgrade_password_hash($pdo, $username, $password, $storedPassword);
 session_start();
         // Set username session variable
         $_SESSION['adminidusername'] = $username;

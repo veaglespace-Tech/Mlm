@@ -29,6 +29,10 @@ mysqli_stmt_close($stmt);
 }
 if ($result)
 {
+    // Re-calculate left and right counts to automatically clear old network tree caches
+    if (isset($pdo)) {
+        mlmp_recalculate_network_counts($pdo);
+    }
 print "<center>User deleted<br/>Redirecting in 2 seconds...</center>";
 }
 else

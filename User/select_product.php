@@ -12,8 +12,20 @@ if (!isset($_SESSION['reg_username'])) {
 
 $username = $_SESSION['reg_username'];
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['selected_product'])) {
-    $_SESSION['selected_product'] = $_POST['selected_product'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['selected_package'])) {
+    $pkg_id = $_POST['selected_package'];
+    $_SESSION['signup_data']['package'] = $pkg_id;
+    
+    // Fetch package details
+    $stmt = $pdo->prepare("SELECT name FROM packages WHERE id = ?");
+    $stmt->execute([$pkg_id]);
+    $pkg = $stmt->fetch();
+    if($pkg) {
+        $_SESSION['selected_product'] = $pkg['name'];
+    } else {
+        $_SESSION['selected_product'] = 'Membership Package';
+    }
+    
     header("Location: payu_payment.php");
     exit;
 }
@@ -22,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['selected_product'])) {
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>MLM Platform - Select Your Product</title>
-<meta name="description" content="Select your premium starter package to proceed to checkout." />
+<title>MLM Platform - Select Your Membership Package</title>
+<meta name="description" content="Select your premium membership package to proceed to checkout." />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,89 +52,105 @@ html, body {
     color: #425f75;
 }
 .product-card {
-    border: 1px solid rgba(121, 163, 193, 0.34);
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 16px;
-    padding: 18px;
+    border: 2px solid rgba(226, 232, 240, 0.8);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 24px 20px;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
     gap: 16px;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    overflow: hidden;
+}
+.product-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 6px;
+    background: transparent;
+    transition: all 0.3s ease;
 }
 .product-card:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.7);
-    box-shadow: 0 10px 30px rgba(72, 114, 142, 0.2);
+    border-color: rgba(99, 102, 241, 0.5);
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.15);
 }
 .product-radio {
     display: none;
 }
 .product-card.selected {
     border-color: #6366f1 !important;
-    background: rgba(99, 102, 241, 0.08) !important;
-    box-shadow: 0 0 25px rgba(99, 102, 241, 0.15) !important;
+    background: #ffffff !important;
+    box-shadow: 0 15px 40px rgba(99, 102, 241, 0.25) !important;
+}
+.product-card.selected::before {
+    background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
 }
 .product-icon {
-    font-size: 20px;
+    font-size: 28px;
     color: #6366f1;
-    background: rgba(99, 102, 241, 0.12);
-    border-radius: 12px;
-    width: 48px;
-    height: 48px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+    border-radius: 50%;
+    width: 64px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all 0.2s;
+    transition: all 0.3s;
 }
 .product-card.selected .product-icon {
-    background: rgba(99, 102, 241, 0.25) !important;
-    color: #818cf8 !important;
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #6366f1, #a855f7) !important;
+    color: #ffffff !important;
+    transform: scale(1.1);
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
 }
 .product-info {
-    flex-grow: 1;
-    padding-right: 75px;
+    width: 100%;
 }
 .product-badge {
     position: absolute;
-    top: 18px;
-    right: 18px;
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    font-size: 9px;
+    top: 16px;
+    right: 16px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 9999px;
-    letter-spacing: 0.05em;
-    flex-shrink: 0;
-    transition: all 0.2s;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+}
+.product-card.selected .product-badge {
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
 }
 @media (max-width: 480px) {
     .product-card {
-        padding: 14px 12px;
+        padding: 20px 16px;
         gap: 12px;
     }
     .product-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
-        border-radius: 10px;
-    }
-    .product-info {
-        padding-right: 64px;
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
     }
     .product-badge {
         top: 12px;
         right: 12px;
-        font-size: 8px;
-        padding: 2px 8px;
+        font-size: 9px;
+        padding: 4px 10px;
     }
 }
 </style>
@@ -147,23 +175,23 @@ html, body {
 
     <!-- Hero Content -->
     <div class="my-auto relative z-10 max-w-lg">
-      <span class="px-3 py-1 text-xs font-semibold text-purple-600 bg-purple-500/10 border border-purple-500/20 rounded-full inline-block mb-6 tracking-wide">STARTER KIT SELECTION</span>
+      <span class="px-3 py-1 text-xs font-semibold text-purple-600 bg-purple-500/10 border border-purple-500/20 rounded-full inline-block mb-6 tracking-wide">MEMBERSHIP SELECTION</span>
       <h1 class="text-4xl lg:text-5xl font-extrabold leading-tight mb-6 tracking-tight" style="color:#0d1b2a;">
-        Customize your premium kit.
+        Choose your plan.
       </h1>
       <p class="text-base lg:text-lg leading-relaxed mb-8" style="color:#425f75;">
-        Choose one complimentary digital starter package included directly with your membership register. Accelerate your MLM network growth instantly.
+        Select the membership package that best fits your goals. Start your journey and accelerate your MLM network growth instantly.
       </p>
 
       <!-- Metrics -->
       <div class="grid grid-cols-3 gap-4 pt-4">
         <div class="p-4 rounded-xl border" style="background:rgba(255,255,255,0.5);border-color:rgba(121,163,193,0.34);backdrop-filter:blur(8px);">
-          <div class="text-lg font-extrabold" style="color:#0d1b2a;">Included</div>
-          <div class="text-[10px] font-semibold tracking-wider uppercase mt-1" style="color:#748da1;">Starter Kit</div>
+          <div class="text-lg font-extrabold" style="color:#0d1b2a;">Premium</div>
+          <div class="text-[10px] font-semibold tracking-wider uppercase mt-1" style="color:#748da1;">Plans</div>
         </div>
         <div class="p-4 rounded-xl border" style="background:rgba(255,255,255,0.5);border-color:rgba(121,163,193,0.34);backdrop-filter:blur(8px);">
-          <div class="text-purple-600 text-lg font-extrabold">INR 1,000</div>
-          <div class="text-[10px] font-semibold tracking-wider uppercase mt-1" style="color:#748da1;">Package Price</div>
+          <div class="text-purple-600 text-lg font-extrabold">Instant</div>
+          <div class="text-[10px] font-semibold tracking-wider uppercase mt-1" style="color:#748da1;">Activation</div>
         </div>
         <div class="p-4 rounded-xl border" style="background:rgba(255,255,255,0.5);border-color:rgba(121,163,193,0.34);backdrop-filter:blur(8px);">
           <div class="text-lg font-extrabold" style="color:#0d1b2a;">Instant</div>
@@ -179,68 +207,77 @@ html, body {
   </div>
 
   <!-- Right Side: Interactive Selection Form -->
-  <div class="w-full lg:w-5/12 flex flex-col justify-center px-6 sm:px-16 lg:px-20 py-12 bg-transparent relative">
+  <div class="w-full lg:w-7/12 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12 bg-transparent relative">
     <!-- Glowing background light for mobile -->
     <div class="lg:hidden absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none" style="background-color:rgba(123,174,210,0.15);"></div>
     
     <!-- Mobile header logo -->
-    <div class="lg:hidden flex items-center justify-center gap-2 mb-10">
+    <div class="lg:hidden flex items-center justify-center gap-2 mb-8">
       <span class="text-md font-bold tracking-wider" style="color:#0d1b2a;">MLM Platform</span>
     </div>
 
-    <div class="max-w-md w-full mx-auto relative z-10">
+    <div class="max-w-2xl w-full mx-auto relative z-10">
       <!-- Title Header -->
-      <div class="mb-8">
-        <h2 class="text-2xl font-bold tracking-tight mb-2" style="color:#0d1b2a;">Select Your Product</h2>
-        <p class="text-sm" style="color:#425f75;">Choose one starter pack below to activate your premium license.</p>
+      <div class="mb-8 text-center lg:text-left">
+        <h2 class="text-3xl font-extrabold tracking-tight mb-2" style="color:#0d1b2a;">Select Your Package</h2>
+        <p class="text-base" style="color:#425f75;">Choose a membership package below to activate your premium license.</p>
       </div>
 
       <!-- Interactive Radio Cards Form -->
-      <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-4">
+      <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-6">
         
-        <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <?php
-            $query = "SELECT id, name, description, icon, emoji FROM products WHERE active = 1 ORDER BY id ASC";
+            $query = "SELECT id, name, price, currency FROM packages WHERE active = 1 ORDER BY price ASC";
             $stmt = $pdo->prepare($query);
             $stmt->execute();
-            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             $first = true;
-            foreach ($products as $prod) {
-                $prod_id = "prod" . $prod['id'];
-                $prod_name_js = htmlspecialchars($prod['name'], ENT_QUOTES, 'UTF-8');
+            $icons = ['fa-crown', 'fa-gem', 'fa-rocket', 'fa-bolt', 'fa-star'];
+            $iconIndex = 0;
+
+            foreach ($packages as $pkg) {
+                $pkg_id = "pkg_" . $pkg['id'];
+                $pkg_name_js = htmlspecialchars($pkg['name'], ENT_QUOTES, 'UTF-8');
+                $pkg_price = number_format((float)$pkg['price'], 2);
+                $pkg_currency = htmlspecialchars($pkg['currency'], ENT_QUOTES, 'UTF-8');
+                $icon = $icons[$iconIndex % count($icons)];
+                
                 $selected_class = $first ? " selected" : "";
                 $checked = $first ? " checked" : "";
                 
-                echo '<div class="product-card' . $selected_class . '" id="card_' . $prod_id . '" onclick="selectProduct(\'' . $prod_id . '\', \'' . addslashes($prod_name_js) . '\')">';
-                echo '  <input type="radio" name="selected_product" id="' . $prod_id . '" value="' . htmlspecialchars($prod['name'], ENT_QUOTES, 'UTF-8') . '"' . $checked . ' class="product-radio">';
+                echo '<div class="product-card' . $selected_class . '" id="card_' . $pkg_id . '" onclick="selectProduct(\'' . $pkg_id . '\', \'' . addslashes($pkg_name_js) . '\')">';
+                echo '  <input type="radio" name="selected_package" id="' . $pkg_id . '" value="' . htmlspecialchars($pkg['id'], ENT_QUOTES, 'UTF-8') . '"' . $checked . ' class="product-radio">';
+                echo '  <span class="product-badge" id="badge_' . $pkg_id . '">';
+                if ($first) {
+                    echo '<i class="fa-solid fa-check"></i> SELECTED';
+                } else {
+                    echo 'SELECT';
+                }
+                echo '</span>';
                 echo '  <div class="product-icon">';
-                if ($prod['icon']) {
-                    echo '    <i class="' . htmlspecialchars($prod['icon'], ENT_QUOTES, 'UTF-8') . '"></i>';
-                }
-                if ($prod['emoji']) {
-                    echo '    <span class="ml-1">' . htmlspecialchars($prod['emoji'], ENT_QUOTES, 'UTF-8') . '</span>';
-                }
+                echo '    <i class="fa-solid ' . $icon . '"></i>';
                 echo '  </div>';
                 echo '  <div class="product-info">';
-                echo '    <h3 class="font-semibold text-sm m-0" style="color:#0d1b2a;">' . htmlspecialchars($prod['name'], ENT_QUOTES, 'UTF-8') . '</h3>';
-                echo '    <p class="text-xs mt-1 leading-relaxed" style="color:#425f75;">' . htmlspecialchars($prod['description'], ENT_QUOTES, 'UTF-8') . '</p>';
+                echo '    <h3 class="font-bold text-lg m-0" style="color:#0d1b2a;">' . htmlspecialchars($pkg['name'], ENT_QUOTES, 'UTF-8') . '</h3>';
+                echo '    <div class="mt-2 inline-block px-4 py-1 rounded-full bg-slate-100 text-slate-800 font-extrabold text-sm border border-slate-200">' . $pkg_currency . ' ' . $pkg_price . '</div>';
                 echo '  </div>';
-                echo '  <span class="product-badge">INCLUDED</span>';
                 echo '</div>';
                 
                 $first = false;
+                $iconIndex++;
             }
             ?>
         </div>
 
-        <div class="pt-6 flex gap-3">
+        <div class="pt-8 flex flex-col sm:flex-row gap-4 max-w-lg mx-auto lg:mx-0">
           <a href="signup.php?back=1" 
-             class="flex-[0.6] text-center bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl py-3 text-sm font-semibold tracking-wide transition duration-200 cursor-pointer shadow-sm transform active:scale-[0.98]" style="display: flex; align-items: center; justify-content: center;">
+             class="flex-1 sm:flex-none sm:w-1/3 text-center bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl py-3.5 text-sm font-semibold tracking-wide transition duration-200 cursor-pointer shadow-sm transform active:scale-[0.98]" style="display: flex; align-items: center; justify-content: center;">
             <i class="fa-solid fa-arrow-left mr-2 text-xs"></i> Back
           </a>
           <button type="submit" 
-                  class="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-xl py-3 text-sm font-semibold tracking-wide transition duration-200 cursor-pointer shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 transform active:scale-[0.98]">
+                  class="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white rounded-xl py-3.5 text-sm font-semibold tracking-wide transition duration-200 cursor-pointer shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transform active:scale-[0.98]">
             Next: Complete Payment <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
           </button>
         </div>
@@ -251,14 +288,21 @@ html, body {
 
 <script>
 function selectProduct(id, val) {
-    // Deselect all cards
+    // Reset all cards and badges
     document.querySelectorAll('.product-card').forEach(card => {
         card.classList.remove('selected');
+        // Reset badge text
+        const badge = card.querySelector('.product-badge');
+        if (badge) badge.innerHTML = 'SELECT';
     });
     
     // Select clicked card and check radio
     document.getElementById('card_' + id).classList.add('selected');
     document.getElementById(id).checked = true;
+    
+    // Update badge for selected
+    const selectedBadge = document.getElementById('badge_' + id);
+    if (selectedBadge) selectedBadge.innerHTML = '<i class="fa-solid fa-check"></i> SELECTED';
 }
 </script>
 <script src="js/app.v1.js"></script>

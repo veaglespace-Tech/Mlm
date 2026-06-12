@@ -7,7 +7,7 @@ include_once("smtp_helper.php");
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['femail']))
 {
 
-$email=mysqli_real_escape_string($con,$_POST['femail'] ?? '');
+$email=$_POST['femail'] ?? '';
 $status=1;
 if($status==1){
 
@@ -24,18 +24,16 @@ $status= "NOTOK";
 }
 
 
-$result = mysqli_query($con,"SELECT count(*) FROM  affiliateuser where email = '$email'");
-$row = mysqli_fetch_row($result);
-$numrows = $row[0];
+$numrows = mlmp_pdo_count($pdo, "SELECT count(*) FROM affiliateuser where email = ?", [$email]);
 
 if(($numrows) == 0) {
 $msg=$msg."Your account not found or your account is inactive. Please contact your administrator.<BR>";
 $status= "NOTOK";}
 
-$sqlquery="SELECT wlink FROM settings where sno=0"; //fetching website from databse
-$rec2=mysqli_query($con,$sqlquery);
-$row2 = mysqli_fetch_row($rec2);
-$wlink=$row2[0]; //assigning website address
+$row2 = mlmp_pdo_fetch($pdo, "SELECT wlink FROM settings where sno=0");
+if($row2) {
+    $wlink=$row2['wlink']; //assigning website address
+}
 }
 
 $newpassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*') , 0 , 14 );
@@ -47,14 +45,14 @@ $status= "NOTOK";}
 
 if($status=="OK")
 {
-$sqlquery111="SELECT etext FROM emailtext where code='FORGOTPASSWORD'"; //fetching website from databse
-$rec2111=mysqli_query($con,$sqlquery111);
-$row2111 = mysqli_fetch_row($rec2111);
-$emailtext=$row2111[0]; //assigning email text for email
+$row2111 = mlmp_pdo_fetch($pdo, "SELECT etext FROM emailtext where code='FORGOTPASSWORD'");
+if($row2111) {
+    $emailtext=$row2111['etext']; //assigning email text for email
+}
 
-
-$hashedPassword = mysqli_real_escape_string($con, mlmp_hash_password($newpassword));
-$re = mysqli_query($con,"update affiliateuser set password = '$hashedPassword' where email = '$email'");
+$hashedPassword = mlmp_hash_password($newpassword);
+$stmt = $pdo->prepare("UPDATE affiliateuser SET password = ? WHERE email = ?");
+$re = $stmt->execute([$hashedPassword, $email]);
 if($re)
 {
 

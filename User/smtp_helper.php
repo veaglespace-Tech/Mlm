@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * SMTP Mail Helper for MLM Platform MLM Platform
  * Pure PHP SMTP client using sockets. No external dependencies.
@@ -59,7 +59,14 @@ class MLMP_SMTP {
             }
 
             $this->log("Connecting to $remoteHost:{$this->port}");
-            $socket = @fsockopen($remoteHost, $this->port, $errno, $errstr, $this->timeout);
+            $context = stream_context_create([
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                ]
+            ]);
+            $socket = @stream_socket_client("$remoteHost:{$this->port}", $errno, $errstr, $this->timeout, STREAM_CLIENT_CONNECT, $context);
             if (!$socket) {
                 throw new Exception("Failed to connect: $errstr ($errno)");
             }
@@ -77,7 +84,8 @@ class MLMP_SMTP {
                 $this->read($socket, '220');
                 
                 // Enable cryptography on socket
-                if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                $crypto_method = STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT | STREAM_CRYPTO_METHOD_TLS_CLIENT;
+                if (!@stream_socket_enable_crypto($socket, true, $crypto_method)) {
                     throw new Exception("Failed to enable STARTTLS encryption");
                 }
                 
@@ -187,7 +195,17 @@ function mlmp_send_mail($to, $subject, $message) {
     // Fallback to PHP native mail()
     $headers = "MIME-Version: 1.0\r\n";
     $headers .= "Content-type: text/html; charset=UTF-8\r\n";
+    
+    // Ensure from email is not entirely broken which causes mail() to drop silently
+    if (strpos($fromEmail, '@') === false) {
+        $fromEmail = "noreply@localhost.localdomain";
+    }
+    
     $headers .= "From: $fromName <$fromEmail>\r\n";
-    return @mail($to, $subject, $message, $headers);
+    $mailResult = @mail($to, $subject, $message, $headers);
+    if (!$mailResult) {
+        error_log("MLMP Native Mail Failed. Recipient: $to. Ensure sendmail is configured or SMTP is enabled.");
+    }
+    return $mailResult;
 }
 

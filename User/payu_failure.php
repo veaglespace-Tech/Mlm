@@ -4,8 +4,16 @@ if(!isset($_SESSION)){
 }
 include_once("z_db.php");
 
-// Safety check (recovers username from GET if session is lost)
-$username = $_GET['username'] ?? $_SESSION['reg_username'] ?? '';
+// Safety check (recovers username from PayU POST, GET if simulation, or session)
+$username = $_POST['udf1'] ?? $_GET['username'] ?? $_SESSION['reg_username'] ?? '';
+
+// We do NOT delete from affiliateuser here because the pending user is in pending_registrations.
+// But we can clean up any legacy failed records just in case.
+if (!empty($username)) {
+    $stmt_cleanup = $pdo->prepare("DELETE FROM affiliateuser WHERE username = ? AND active = 0");
+    $stmt_cleanup->execute([$username]);
+}
+
 if (empty($username)) {
     header("Location: signup.php");
     exit;
@@ -109,7 +117,7 @@ html, body {
       </p>
 
       <div class="pt-6 flex flex-col gap-4">
-        <a href="payu_payment.php" 
+        <a href="payu_payment.php?retry_username=<?php echo urlencode($username); ?>" 
            class="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-xl py-3 text-sm font-semibold tracking-wide transition duration-200 cursor-pointer shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transform active:scale-[0.98] inline-flex items-center justify-center gap-2">
           Retry Payment <i class="fa-solid fa-arrow-rotate-right text-xs"></i>
         </a>

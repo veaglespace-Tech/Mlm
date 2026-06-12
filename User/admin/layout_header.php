@@ -122,6 +122,14 @@ if (!function_exists('nav_active')) {
       </a>
 
       <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Users & Sales</div>
+      <a href="approvals.php" <?php echo nav_active('approvals', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-user-check"></i></span>
+        Approval Requests
+      </a>
+      <a href="rejected_users.php" <?php echo nav_active('rejected_users', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-user-xmark"></i></span>
+        Rejected History
+      </a>
       <a href="users.php" <?php echo nav_active('users', $active_nav); ?>>
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-users"></i></span>
         Users Directory
