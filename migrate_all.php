@@ -1,5 +1,5 @@
 <?php
-require 'C:\Users\HP\Desktop\MLMP\User\z_db.php';
+require __DIR__ . '/User/z_db.php';
 echo "--- Running binary & pending schemas ---\n";
 try {
     ensure_binary_schema($pdo);

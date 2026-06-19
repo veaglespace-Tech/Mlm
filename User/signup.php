@@ -48,12 +48,16 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
 
     // Clean up abandoned registrations (active = 0) that match the provided username, email, or mobile.
     // This allows users to retry registration if their previous payment failed or they abandoned checkout.
-    $stmt_cleanup = $pdo->prepare("DELETE FROM affiliateuser WHERE active = 0 AND (username = ? OR email = ? OR mobile = ?)");
-    $stmt_cleanup->execute([$username, $email, $mobile]);
+    try {
+        $stmt_cleanup = $pdo->prepare("DELETE FROM affiliateuser WHERE active = 0 AND (username = ? OR email = ? OR mobile = ?)");
+        $stmt_cleanup->execute([$username, $email, $mobile]);
+    } catch (Exception $e) {}
 
     // Also clean up previously rejected records from pending_registrations so they can try again
-    $stmt_pending_cleanup = $pdo->prepare("DELETE FROM pending_registrations WHERE admin_approval_status = 'Rejected' AND (username = ? OR email = ? OR mobile = ?)");
-    $stmt_pending_cleanup->execute([$username, $email, $mobile]);
+    try {
+        $stmt_pending_cleanup = $pdo->prepare("DELETE FROM pending_registrations WHERE admin_approval_status = 'Rejected' AND (username = ? OR email = ? OR mobile = ?)");
+        $stmt_pending_cleanup->execute([$username, $email, $mobile]);
+    } catch (Exception $e) {}
 
     if(mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE username = ?", [$username]) > 0){
         $msg .= "Userid Already Exists. Please Try Another One.<BR>";
