@@ -4,6 +4,7 @@ session_start();
 if (!isset($_SESSION['username'])) {
     echo "<script>window.location='index.php';</script>"; exit;
 }
+ensure_binary_schema($pdo);
 
 // Fetch user's package & currency info
 $urow = mlmp_pdo_fetch($pdo, "SELECT pcktaken FROM affiliateuser WHERE username=?", [$_SESSION['username']]);
@@ -42,7 +43,7 @@ $extra_head = '
     color: white;
     border-radius: 50%;
     border: 2px solid #fff;
-    font-weight: bold;
+    font-weight: bold; 
     cursor: pointer;
     position: absolute;
     bottom: -12px;
@@ -354,36 +355,89 @@ foreach ($levels as $l) {
 }
 
 // Tree logic
-$root_user = $_GET['user'] ?? $_SESSION['username'];
-function getTreeData($pdo, $username, $current_depth, $max_depth) {
+function is_user_in_binary_network(PDO $pdo, string $candidateUsername, string $rootUsername): bool {
+    if ($candidateUsername === $rootUsername) {
+        return true;
+    }
+
+    // Collect all board IDs belonging to root (including _bc_ boards)
+    $boards = mlmp_pdo_fetch_all($pdo, "SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC", [$rootUsername, $rootUsername . '_bc_%']);
+    $rootIds = array_map(fn($b) => (int)$b['Id'], $boards);
+
+    $candidate = mlmp_pdo_fetch($pdo, "SELECT Id, parent_id FROM affiliateuser WHERE username = ? LIMIT 1", [$candidateUsername]);
+    if (!$candidate) {
+        return false;
+    }
+
+    $parentId = (int)($candidate['parent_id'] ?? 0);
+    $visited = [];
+
+    while ($parentId > 0 && !isset($visited[$parentId])) {
+        if (in_array($parentId, $rootIds)) {
+            return true;
+        }
+        $visited[$parentId] = true;
+        $parent = mlmp_pdo_fetch($pdo, "SELECT parent_id FROM affiliateuser WHERE Id = ? LIMIT 1", [$parentId]);
+        if (!$parent) {
+            break;
+        }
+        $parentId = (int)($parent['parent_id'] ?? 0);
+    }
+
+    return false;
+}
+
+$requested_user = trim($_GET['user'] ?? $_SESSION['username']);
+$root_user = is_user_in_binary_network($pdo, $requested_user, $_SESSION['username']) ? $requested_user : $_SESSION['username'];
+$tree_access_denied = ($requested_user !== $root_user);
+
+function getTreeData($pdo, $username, $current_depth, $max_depth, $session_username = '') {
     if ($current_depth > $max_depth) return null;
     $user_data = mlmp_pdo_fetch($pdo, "SELECT Id, fname, username, active, left_count, right_count, position FROM affiliateuser WHERE username=?", [$username]);
     if (!$user_data) return null;
     $node = [
-        'id' => $user_data['Id'],
-        'fname' => $user_data['fname'],
-        'username' => $user_data['username'],
-        'active' => $user_data['active'],
-        'left_count' => $user_data['left_count'],
-        'right_count' => $user_data['right_count'],
-        'position' => $user_data['position'],
-        'left' => null,
-        'right' => null
+        'id'               => $user_data['Id'],
+        'fname'            => $user_data['fname'],
+        'username'         => $user_data['username'],
+        'active'           => $user_data['active'],
+        'left_count'       => $user_data['left_count'],
+        'right_count'      => $user_data['right_count'],
+        'position'         => $user_data['position'],
+        'left'             => null,
+        'right'            => null,
+        'unilevel_children'=> []
     ];
     if ($current_depth < $max_depth) {
-        $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id=?", [(int)$user_data['Id']]);
-        foreach ($children as $child) {
-            if ($child['position'] == 'L') {
-                $node['left'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth);
-            } elseif ($child['position'] == 'R') {
-                $node['right'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth);
+        // If this is the session user's root node, show all _bc_ boards as unilevel children
+        if (!empty($session_username) && $username === $session_username) {
+            $allBoards = mlmp_pdo_fetch_all($pdo, "SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC", [$username, $username . '_bc_%']);
+            $boardIds = array_map(fn($b) => (int)$b['Id'], $allBoards);
+            if (!empty($boardIds)) {
+                $in_clause = implode(',', $boardIds);
+                $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id IN ($in_clause) ORDER BY parent_id ASC, position ASC");
+                foreach ($children as $child) {
+                    $child_node = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, $session_username);
+                    if ($child_node) {
+                        $node['unilevel_children'][] = $child_node;
+                    }
+                }
+            }
+        } else {
+            // Normal binary node
+            $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id=?", [(int)$user_data['Id']]);
+            foreach ($children as $child) {
+                if ($child['position'] == 'L') {
+                    $node['left'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, $session_username);
+                } elseif ($child['position'] == 'R') {
+                    $node['right'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, $session_username);
+                }
             }
         }
     }
     return $node;
 }
 
-$tree_data = getTreeData($pdo, $root_user, 1, 4);
+$tree_data = getTreeData($pdo, $root_user, 1, 4, $_SESSION['username']);
 
 function renderNodeHTML($node, $pos_label = '', $has_children = false, $is_collapsed = false) {
     if (!$node) {
@@ -424,16 +478,24 @@ function renderNodeHTML($node, $pos_label = '', $has_children = false, $is_colla
 
 function renderTreeHTML($node, $depth = 1) {
     echo "<li>";
-    $has_children = ($node && (isset($node['left']) || isset($node['right'])));
-    $is_collapsed = ($depth >= 2 && $has_children); // Level 1 (depth=1) is expanded, level 2 is collapsed
-    
+    $has_children = ($node && (isset($node['left']) || isset($node['right']) || !empty($node['unilevel_children'])));
+    $is_collapsed = ($depth >= 2 && $has_children);
+
     echo renderNodeHTML($node, $node ? ($node['position'] ?: 'Root') : '', $has_children, $is_collapsed);
-    
+
     if ($node && $has_children) {
         $display = $is_collapsed ? 'style="display:none;"' : '';
         echo "<ul class='nested-tree' {$display}>";
-        renderTreeHTML($node['left'] ?? null, $depth + 1);
-        renderTreeHTML($node['right'] ?? null, $depth + 1);
+        if (!empty($node['unilevel_children'])) {
+            // Multi-board: render all children from all boards
+            foreach ($node['unilevel_children'] as $uchild) {
+                renderTreeHTML($uchild, $depth + 1);
+            }
+        } else {
+            // Standard binary: render L and R
+            renderTreeHTML($node['left'] ?? null, $depth + 1);
+            renderTreeHTML($node['right'] ?? null, $depth + 1);
+        }
         echo "</ul>";
     }
     echo "</li>";
@@ -447,6 +509,12 @@ function renderTreeHTML($node, $depth = 1) {
 
 <!-- TREE VIEW SECTION -->
 <div id="main-tree-view" style="display:none;">
+    <?php if (!empty($tree_access_denied)): ?>
+        <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-xl p-4 mb-4 text-sm font-semibold flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            You can only view members inside your own binary network.
+        </div>
+    <?php endif; ?>
     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
             <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5 min-w-max">

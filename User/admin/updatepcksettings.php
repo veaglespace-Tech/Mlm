@@ -17,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect_with_message("Invalid request.");
 }
 
+ensure_package_schema($pdo);
+
 $pidmain = (int)($_POST['pckmainid'] ?? 0);
 $pname = trim($_POST['pckname'] ?? '');
 $pdetail = trim($_POST['pckdetail'] ?? '');

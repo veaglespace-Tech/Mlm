@@ -2,6 +2,9 @@
 if(!isset($_SESSION)){
     session_start();
 }
+// Clear checkout lock so the user can retry payment
+unset($_SESSION['checkout_lock']);
+
 include_once("z_db.php");
 
 // Safety check (recovers username from PayU POST, GET if simulation, or session)

@@ -15,5 +15,19 @@ try {
     echo "Pending schema error: " . $e->getMessage() . "\n";
 }
 
+try {
+    ensure_package_schema($pdo);
+    echo "Package schema ensured successfully.\n";
+} catch (Exception $e) {
+    echo "Package schema error: " . $e->getMessage() . "\n";
+}
+
+try {
+    ensure_payout_schema($pdo);
+    echo "Payout schema ensured successfully.\n";
+} catch (Exception $e) {
+    echo "Payout schema error: " . $e->getMessage() . "\n";
+}
+
 echo "\nAll migrations completed!\n";
 ?>

@@ -1,11 +1,15 @@
 <?php
 session_start();
-// Delete certain session
-unset($_SESSION['username']);
-// Delete all session variables
-session_destroy();
 
-// Jump to login page
-header('Location: index.php'); //you can change this to the home page of website
+// Only unset Admin-specific session variables.
+// Do NOT call session_destroy() - it would wipe the shared session,
+// logging out the User if both are open simultaneously in the same browser.
+unset($_SESSION['adminidusername']);
+unset($_SESSION['approval_msg']);
+unset($_SESSION['product_message']);
+unset($_SESSION['package_message']);
 
+// Jump to admin login page
+header('Location: index.php');
+exit;
 ?>

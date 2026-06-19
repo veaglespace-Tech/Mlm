@@ -13,6 +13,8 @@ if (!isset($_SESSION['adminidusername'])) {
         exit;
 }
 
+ensure_package_schema($pdo);
+
 $upid = (int)($_POST['upackage'] ?? $_GET['upackage'] ?? 0);
 if ($upid <= 0) {
     $_SESSION['package_message'] = "Invalid package selected.";

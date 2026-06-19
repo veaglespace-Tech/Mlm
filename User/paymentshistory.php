@@ -8,13 +8,22 @@ if (!isset($_SESSION['username'])) {
 $page_title = "Payment History";
 $active_nav = "payments";
 include 'layout_header.php';
+ensure_payout_schema($pdo);
 
 // Fetch user ID
 $uid_row = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE username = ?", [$_SESSION['username']]);
 $uid = $uid_row['Id'] ?? 0;
 
-// Fetch payments
-$payments = mlmp_pdo_fetch_all($pdo, "SELECT payment_amount, payment_status, createdtime FROM payments WHERE userid = ? ORDER BY createdtime DESC", [$uid]);
+// --- Pagination ---
+$per_page = 20;
+$current_page = max(1, (int)($_GET['page'] ?? 1));
+$total_payments = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM payments WHERE userid = ?", [$uid]);
+$total_pages = max(1, (int)ceil($total_payments / $per_page));
+if ($current_page > $total_pages) $current_page = $total_pages;
+$offset = ($current_page - 1) * $per_page;
+
+// Fetch paginated payments
+$payments = mlmp_pdo_fetch_all($pdo, "SELECT payment_amount, payment_status, createdtime FROM payments WHERE userid = ? ORDER BY createdtime DESC LIMIT $per_page OFFSET $offset", [$uid]);
 ?>
 
 <div class="bg-white border border-slate-200 shadow-sm rounded-2xl shadow-xl flex flex-col mb-6">
@@ -47,6 +56,7 @@ $payments = mlmp_pdo_fetch_all($pdo, "SELECT payment_amount, payment_status, cre
         <tbody class="text-sm text-slate-700 divide-y divide-white/5">
           <?php foreach ($payments as $i => $p):
             $is_done = ($p['payment_status'] == 1);
+            $is_rejected = ($p['payment_status'] == 2);
           ?>
           <tr class="hover:bg-slate-50 transition-colors">
             <td class="px-5 py-3.5 text-slate-600 font-medium"><?php echo $i + 1; ?></td>
@@ -55,6 +65,8 @@ $payments = mlmp_pdo_fetch_all($pdo, "SELECT payment_amount, payment_status, cre
             <td class="px-5 py-3.5">
               <?php if ($is_done): ?>
                 <span class="text-emerald-600 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-md text-xs border border-emerald-500/20"><i class="fa-solid fa-check-circle mr-1"></i> Completed</span>
+              <?php elseif ($is_rejected): ?>
+                <span class="text-red-600 font-semibold bg-red-500/10 px-2.5 py-1 rounded-md text-xs border border-red-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i> Rejected</span>
               <?php else: ?>
                 <span class="text-amber-500 font-semibold bg-amber-500/10 px-2.5 py-1 rounded-md text-xs border border-amber-500/20"><i class="fa-solid fa-clock mr-1"></i> Pending</span>
               <?php endif; ?>
@@ -66,5 +78,42 @@ $payments = mlmp_pdo_fetch_all($pdo, "SELECT payment_amount, payment_status, cre
     <?php endif; ?>
   </div>
 </div>
+
+<!-- Pagination Controls -->
+<?php if ($total_pages > 1): ?>
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-1">
+    <div class="text-sm text-slate-500 font-medium">
+        Showing page <strong class="text-slate-700"><?php echo $current_page; ?></strong> of <strong class="text-slate-700"><?php echo $total_pages; ?></strong> &mdash; <?php echo $total_payments; ?> total records
+    </div>
+    <div class="flex items-center gap-1.5">
+        <?php
+        $base_url = '?page=';
+        if ($current_page > 1): ?>
+            <a href="<?php echo $base_url . ($current_page - 1); ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm">
+                <i class="fa-solid fa-chevron-left text-xs"></i> Prev
+            </a>
+        <?php endif;
+        $range = 2;
+        $start = max(1, $current_page - $range);
+        $end   = min($total_pages, $current_page + $range);
+        if ($start > 1): ?>
+            <a href="<?php echo $base_url . 1; ?>" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm">1</a>
+            <?php if ($start > 2): ?><span class="px-1 text-slate-400 text-sm">…</span><?php endif;
+        endif;
+        for ($p = $start; $p <= $end; $p++): ?>
+            <a href="<?php echo $base_url . $p; ?>" class="px-3 py-2 rounded-lg border text-sm font-semibold transition-all shadow-sm <?php echo ($p === $current_page) ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-200' : 'border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700'; ?>"><?php echo $p; ?></a>
+        <?php endfor;
+        if ($end < $total_pages): ?>
+            <?php if ($end < $total_pages - 1): ?><span class="px-1 text-slate-400 text-sm">…</span><?php endif; ?>
+            <a href="<?php echo $base_url . $total_pages; ?>" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm"><?php echo $total_pages; ?></a>
+        <?php endif;
+        if ($current_page < $total_pages): ?>
+            <a href="<?php echo $base_url . ($current_page + 1); ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm">
+                Next <i class="fa-solid fa-chevron-right text-xs"></i>
+            </a>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php include 'layout_footer.php'; ?>

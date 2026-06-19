@@ -1,0 +1,128 @@
+HTTP/1.1 200 OK
+Host: 127.0.0.1:8080
+Date: Tue, 16 Jun 2026 13:49:14 GMT
+Connection: close
+X-Powered-By: PHP/8.2.31
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+Cache-Control: post-check=0, pre-check=0
+Pragma: no-cache
+Content-type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Secure Checkout - MLM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="css/dashboard-modern.css?v=2.0"/>
+<style>
+.checkout-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg-body);
+}
+.checkout-panel {
+    max-width: 480px;
+    width: 100%;
+}
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.info-row:last-child {
+    border-bottom: none;
+}
+.info-label {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+}
+.info-value {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+.pay-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    transition: opacity 0.2s, transform 0.1s;
+}
+.pay-btn:hover {
+    opacity: 0.9;
+}
+.pay-btn:active {
+    transform: scale(0.98);
+}
+</style>
+</head>
+<body class="dash-body">
+
+<div class="checkout-wrapper">
+    <div class="dash-panel checkout-panel">
+        <div class="dash-panel-header" style="justify-content:center; padding: 24px;">
+            <div class="panel-title" style="font-size: 18px;">
+                <span class="panel-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                Secure Checkout
+            </div>
+        </div>
+        
+        <div class="dash-panel-body" style="padding: 24px;">
+                            <div style="text-align:center; margin-bottom:24px;">
+                    <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:var(--accent-purple); color:white; font-size:24px; margin-bottom:16px; box-shadow:0 8px 24px rgba(124,58,237,0.3);">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <h3 style="color:var(--text-primary); font-size:20px; font-weight:800; margin-bottom:8px;">Pending Admin Approval</h3>
+                    <p style="color:var(--text-muted); font-size:14px; line-height:1.6;">
+                        Because you were referred directly by an Administrator, your account requires manual approval. 
+                        You will be notified via email to complete your payment once approved.
+                    </p>
+                </div>
+
+                <div style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding: 0 16px; margin-bottom:24px;">
+                    <div class="info-row">
+                        <span class="info-label">Selected Package</span>
+                        <span class="info-value">Starter Plan</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">User ID</span>
+                        <span class="info-value" style="color:var(--accent-purple);">@qa0616191912</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Status</span>
+                        <span class="info-value" style="color:#f59e0b;">Waiting for Approval</span>
+                    </div>
+                </div>
+
+                <div style="text-align:center; color:var(--text-darker); font-size:13px; margin-top:16px;">
+                    You will be notified once the admin approves your account. <br>
+                    <a href="index.php" style="color:var(--accent-purple); font-weight:600; text-decoration:none; display:inline-block; margin-top:12px;">Return to Home</a>
+                </div>
+                    </div>
+    </div>
+</div>
+
+</body>
+</html>

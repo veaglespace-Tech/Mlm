@@ -92,6 +92,10 @@ if (!function_exists('nav_active')) {
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-network-wired"></i></span>
         My Network
       </a>
+      <a href="my_referrals.php" <?php echo nav_active('my_referrals', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-user-plus"></i></span>
+        My Direct Referrals
+      </a>
 
       <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Configuration</div>
       <a href="gensettings.php" <?php echo nav_active('gensettings', $active_nav); ?>>

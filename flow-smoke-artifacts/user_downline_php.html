@@ -1,0 +1,917 @@
+HTTP/1.1 200 OK
+Host: 127.0.0.1:8080
+Date: Tue, 16 Jun 2026 13:49:17 GMT
+Connection: close
+X-Powered-By: PHP/8.2.31
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>My Network - MLM</title>
+<meta name="description" content="My Network - MLM user portal."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+/* PREMIUM CSS for Binary Tree View */
+.tree-container {
+    overflow-x: auto;
+    padding: 40px 20px;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 12px;
+}
+.toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: #6366f1;
+    color: white;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    font-weight: bold; 
+    cursor: pointer;
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.toggle-btn:hover {
+    background: #4f46e5;
+    transform: translateX(-50%) scale(1.1);
+}
+}
+.tree {
+    display: inline-flex;
+    justify-content: center;
+}
+.tree ul {
+    padding-top: 25px; position: relative;
+    transition: all 0.5s;
+    display: flex;
+    justify-content: center;
+    padding-left: 0;
+    margin: 0;
+}
+.tree li {
+    float: left; text-align: center;
+    list-style-type: none;
+    position: relative;
+    padding: 25px 8px 0 8px;
+    transition: all 0.5s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+/* Connectors */
+.tree li::before, .tree li::after {
+    content: "";
+    position: absolute; top: 0; right: 50%;
+    border-top: 2px solid #cbd5e1;
+    width: 50%; height: 25px;
+}
+.tree li::after {
+    right: auto; left: 50%;
+    border-left: 2px solid #cbd5e1;
+}
+.tree li:only-child::after, .tree li:only-child::before {
+    display: none;
+}
+.tree li:only-child { padding-top: 0; }
+.tree li:first-child::before, .tree li:last-child::after {
+    border: 0 none;
+}
+.tree li:last-child::before {
+    border-right: 2px solid #cbd5e1;
+    border-radius: 0 6px 0 0;
+}
+.tree li:first-child::after {
+    border-radius: 6px 0 0 0;
+}
+.tree ul ul::before {
+    content: "";
+    position: absolute; top: 0; left: 50%;
+    border-left: 2px solid #cbd5e1;
+    width: 0; height: 25px;
+    transform: translateX(-50%);
+}
+.tree-node {
+    text-decoration: none;
+    color: #1e293b;
+    font-size: 12px;
+    display: inline-block;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ffffff;
+    min-width: 140px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+    position: relative;
+    z-index: 1;
+    overflow: visible; /* changed from hidden to let toggle button overflow */
+}
+.tree-node:hover {
+    box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.25);
+    border-color: #a78bfa;
+    transform: translateY(-4px) scale(1.02);
+}
+.node-header {
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+.node-header.active {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.15));
+    color: #059669;
+}
+.node-header.inactive {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.15));
+    color: #dc2626;
+}
+.node-body {
+    padding: 12px;
+    text-align: center;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+/* Custom Search Bar - Google Chrome Style */
+.ts-form {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #dfe1e5;
+    border-radius: 9999px;
+    padding: 4px 4px 4px 14px;
+    width: 250px;
+    max-width: 100%;
+    box-shadow: 0 1px 3px rgba(32, 33, 36, 0.08);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.ts-form:hover {
+    box-shadow: 0 2px 5px rgba(32, 33, 36, 0.15);
+}
+.ts-form:focus-within {
+    border-color: #d2e3fc;
+    box-shadow: 0 1px 4px rgba(32, 33, 36, 0.2);
+}
+.ts-icon {
+    color: #5f6368;
+    font-size: 14px;
+    margin-right: 8px;
+}
+.ts-input {
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: #202124;
+    font-family: "Inter", sans-serif;
+    padding: 2px 0;
+    height: auto;
+}
+.ts-input::placeholder {
+    color: #5f6368;
+    opacity: 0.8;
+}
+.ts-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f3f4;
+    color: #202124;
+    border: none;
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+.ts-btn:hover {
+    background: #e8eaed;
+}
+.dash-panel-header-tree {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.node-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    margin-bottom: 8px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    object-fit: cover;
+}
+.node-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    margin: 0 auto;
+}
+.node-user {
+    color: #64748b;
+    font-size: 11px;
+    margin-top: 2px;
+    font-weight: 500;
+}
+.node-stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+.stat-box {
+    font-size: 10px;
+    color: #64748b;
+    font-weight: 600;
+}
+.stat-box span { 
+    font-weight: 800; 
+    color: #1e293b; 
+    display: block; 
+    font-size: 14px;
+    margin-top: 2px;
+}
+.tree-node.empty {
+    border: 2px dashed #cbd5e1;
+    background: transparent;
+    box-shadow: none;
+    color: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    min-height: 120px;
+    border-radius: 12px;
+}
+.tree-node.empty:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+</style>
+<style>
+/* Custom Scrollbar for a polished look */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+</style>
+</head>
+<body class="font-['Inter'] bg-slate-50 text-slate-800 min-h-screen overflow-x-hidden selection:bg-purple-500/30">
+
+<!-- Mobile overlay -->
+<div id="dashOverlay" class="fixed inset-0 bg-black/60 z-40 hidden backdrop-blur-sm transition-opacity" onclick="closeSidebar()"></div>
+
+<div class="flex min-h-screen">
+
+  <!-- ======== SIDEBAR ======== -->
+  <aside id="dashSidebar" class="w-[260px] bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
+
+    <!-- Logo -->
+    <div class="px-5 pt-6 pb-4 border-b border-slate-100 flex items-center gap-2.5">
+      <span class="text-[17px] font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent whitespace-nowrap">MLM</span>
+    </div>
+
+    <!-- User block -->
+    <div class="px-5 py-4 flex items-center gap-3 border-b border-slate-100">
+      <div class="relative shrink-0">
+        <img src="images/a0.jpg" alt="Avatar"
+             class="w-11 h-11 rounded-full border-2 border-purple-100 object-cover"
+             onerror="this.src='https://ui-avatars.com/api/?name=QA+0616191912&background=7c3aed&color=fff'">
+        <span class="absolute bottom-[1px] right-[1px] w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
+      </div>
+      <div class="flex flex-col">
+        <div class="text-sm font-semibold text-slate-900 leading-tight">QA 0616191912</div>
+        <div class="text-[11px] text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full inline-block mt-1 w-max">
+          Starter Plan        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 overflow-y-auto">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Main Menu</div>
+      <a href="dashboard.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-gauge-high"></i></span>
+        Dashboard
+      </a>
+
+      <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Account</div>
+      <a href="downline.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors bg-purple-50 text-purple-700 border-l-[3px] border-purple-600 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-sitemap"></i></span>
+        Downline / Earnings
+      </a>
+      <a href="my_referrals.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-user-plus"></i></span>
+        My Direct Referrals
+      </a>
+      <a href="withdraw.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-wallet"></i></span> Withdraw Funds
+      </a>
+      <a href="invoice.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-file-invoice-dollar"></i></span>
+        Invoice / Status
+      </a>
+      <a href="paymentshistory.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-clock-rotate-left"></i></span>
+        Payment History
+      </a>
+
+      <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Support</div>
+      <a href="notifications.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-bell"></i></span>
+        Notifications
+      </a>
+      <a href="profile.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-circle-user"></i></span>
+        My Profile
+      </a>
+      <a href="contact.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-headset"></i></span>
+        Contact / Help
+      </a>
+    </nav>
+
+    <!-- Sidebar footer -->
+    <div class="p-4 border-t border-slate-100">
+      <a href="logout.php" class="flex items-center gap-2 text-red-600 text-[13px] font-semibold px-3 py-2 rounded-lg hover:bg-red-50 transition-colors">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        Logout
+      </a>
+    </div>
+
+  </aside><!-- /sidebar -->
+
+  <!-- ======== MAIN ======== -->
+  <div class="flex-1 flex flex-col lg:ml-[260px] min-h-screen bg-slate-50 transition-all duration-300 w-full relative">
+
+    <!-- Topbar -->
+    <header class="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 sm:px-7 sticky top-0 z-30">
+      <div class="flex items-center gap-3.5">
+        <button onclick="toggleSidebar()" class="lg:hidden text-slate-600 hover:text-slate-900 text-xl p-1 focus:outline-none" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <span class="text-lg font-bold text-slate-900">My Network</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="notifications.php" class="w-9 h-9 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-all relative" title="Notifications">
+          <i class="fa-solid fa-bell text-[15px]"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-600 rounded-full border-[1.5px] border-white"></span>
+        </a>
+        <a href="profile.php">
+          <img class="w-9 h-9 rounded-full border-2 border-purple-100 object-cover cursor-pointer hover:opacity-90 transition-opacity" src="images/a0.jpg" alt="Avatar"
+               onerror="this.src='https://ui-avatars.com/api/?name=QA+0616191912&background=7c3aed&color=fff'">
+        </a>
+      </div>
+    </header>
+
+    <!-- Page Content starts here - each page includes its content after this -->
+    <main class="flex-1 p-4 sm:p-7 overflow-x-hidden">
+
+<div style="display:flex;gap:10px;margin-bottom:20px;justify-content:center;">
+  <button id="tab-list-view" onclick="switchMainView('list')" style="padding:10px 20px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;cursor:pointer;font-weight:600;font-size:14px;transition:all 0.3s;"><i class="fa-solid fa-list"></i> List View (Unilevel)</button>
+  <button id="tab-tree-view" onclick="switchMainView('tree')" style="padding:10px 20px;border-radius:8px;background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;cursor:pointer;font-weight:600;font-size:14px;transition:all 0.3s;"><i class="fa-solid fa-sitemap"></i> Tree View (Binary)</button>
+</div>
+
+<!-- TREE VIEW SECTION -->
+<div id="main-tree-view" style="display:none;">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+            <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5 min-w-max">
+                <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-sitemap"></i></span>
+                Binary Network Tree
+            </div>
+            <div style="display:flex; gap:12px; align-items: center; flex-wrap: wrap;">
+                <form method="GET" action="downline.php" class="ts-form">
+                    <input type="hidden" name="view" value="tree">
+                    <i class="fa-solid fa-search ts-icon"></i>
+                    <input type="text" name="user" placeholder="Search Username..." class="ts-input">
+                    <button type="submit" class="ts-btn">Find</button>
+                </form>
+                <button onclick="collapseAllTree()" type="button" style="display:inline-flex; align-items:center; gap:6px; font-size: 13px; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 8px 16px; border-radius: 100px; border:none; cursor:pointer; font-weight: 600; transition: all 0.2s; white-space: nowrap;" onmouseover="this.style.background='rgba(239,68,68,0.15)';" onmouseout="this.style.background='rgba(239,68,68,0.1)';"><i class="fa-solid fa-compress"></i> Collapse All</button>
+                            </div>
+        </div>
+        <div class="p-0 flex-1 relative overflow-hidden rounded-b-2xl">
+                            <div class="tree-container">
+                    <div class="tree">
+                        <ul>
+                            <li>
+    <div style='position:relative; display:inline-block; margin-bottom: 25px;'>
+        <a href='downline.php?user=qa0616191912&view=tree' class='tree-node'>
+            <div class='node-header active'>
+                <span>L</span>
+                <span title='Active'><i class="fa-solid fa-circle-check"></i></span>
+            </div>
+            <div class='node-body'>
+                <img src='images/a0.jpg' class='node-img' onerror="this.src='https://ui-avatars.com/api/?name=QA+0616191912&background=random&color=fff'" alt='User'>
+                <div class='node-name'>QA 0616191912</div>
+                <div class='node-user'>@qa0616191912</div>
+                <div class='node-stats'>
+                    <div class='stat-box'>L <span>0</span></div>
+                    <div class='stat-box'>R <span>0</span></div>
+                </div>
+            </div>
+        </a>
+        
+    </div></li>                        </ul>
+                    </div>
+                </div>
+                    </div>
+        
+        <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <div style="display:flex; gap: 20px; font-size: 12px; color: #94a3b8; justify-content: center;">
+                <div style="display:flex; align-items:center; gap: 6px;">
+                    <span style="width:12px; height:12px; border-radius:3px; background:rgba(16,185,129,0.1); border:1px solid #10b981;"></span> Active Node
+                </div>
+                <div style="display:flex; align-items:center; gap: 6px;">
+                    <span style="width:12px; height:12px; border-radius:3px; background:rgba(239,68,68,0.1); border:1px solid #ef4444;"></span> Inactive Node
+                </div>
+                <div style="display:flex; align-items:center; gap: 6px;">
+                    <span style="width:12px; height:12px; border-radius:3px; background:#f8fafc; border:2px dashed #cbd5e1;"></span> Empty Slot
+                </div>
+                <div style="display:flex; align-items:center; gap: 6px;">
+                    <i class="fa-solid fa-mouse-pointer" style="color: #8b5cf6;"></i> Click on any user to drill down
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LIST VIEW SECTION -->
+<div id="main-list-view">
+    <!-- Total Network Earnings Banner -->
+    <div style="background: linear-gradient(135deg, #7c3aed, #5b21b6); color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);">
+      <div>
+        <div style="font-size: 14px; font-weight: 500; opacity: 0.9; margin-bottom: 4px;">My Total Network Earnings</div>
+        <div style="font-size: 24px; font-weight: 700;">INR 0.00</div>
+      </div>
+      <div style="font-size: 32px; opacity: 0.2;">
+        <i class="fa-solid fa-coins"></i>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;font-size:12px;font-weight:500;color:#64748b;">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:5px;"></span>Active / Paid</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:5px;"></span>Pending / Unpaid</span>
+      <span style="margin-left:auto;font-size:11px;color:#334155;">Currency: <strong style="color:#a78bfa;">INR</strong></span>
+    </div>
+
+    <!-- Tabs for levels -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;" id="levelTabs">
+            <button onclick="showLevel(1)"
+              id="tab1"
+              style="background:linear-gradient(135deg,#7c3aed,#5b21b6);
+                     color:#fff;
+                     border:1px solid transparent;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 1        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(2)"
+              id="tab2"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 2        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(3)"
+              id="tab3"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 3        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(4)"
+              id="tab4"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 4        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(5)"
+              id="tab5"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 5        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(6)"
+              id="tab6"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 6        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(7)"
+              id="tab7"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 7        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(8)"
+              id="tab8"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 8        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(9)"
+              id="tab9"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 9        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+            <button onclick="showLevel(10)"
+              id="tab10"
+              style="background:#f8fafc;
+                     color:#64748b;
+                     border:1px solid #e2e8f0;
+                     border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+                     display:flex;align-items:center;gap:6px;transition:all 0.2s;">
+        Level 10        <span style="background:#e2e8f0;
+                     color:#64748b;
+                     border-radius:20px;padding:1px 7px;font-size:10px;">0</span>
+      </button>
+          </div>
+
+    <!-- Level panels -->
+        <div id="level1" style="display:block;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 1 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 1 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level2" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 2 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 2 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level3" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 3 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 3 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level4" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 4 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 4 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level5" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 5 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 5 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level6" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 6 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 6 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level7" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 7 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 7 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level8" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 8 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 8 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level9" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 9 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 9 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+        <div id="level10" style="display:none;">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
+          <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-layer-group"></i></span>
+            Level 10 Downline
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs text-slate-700 font-medium bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">0 members</span>
+            <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ INR 0.00</span>
+          </div>
+        </div>
+        <div class="p-5 flex flex-col gap-1.5">
+                      <div style="text-align:center;padding:40px 20px;color:#334155;">
+              <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
+              No members at Level 10 yet.
+            </div>
+                  </div>
+      </div>
+    </div>
+    </div>
+
+<script>
+function showLevel(n) {
+    for (var i = 1; i <= 10; i++) {
+        var panel = document.getElementById('level' + i);
+        var tab   = document.getElementById('tab' + i);
+        if (i === n) {
+            panel.style.display = 'block';
+            tab.style.background = 'linear-gradient(135deg,#7c3aed,#5b21b6)';
+            tab.style.color = '#fff';
+            tab.style.borderColor = 'transparent';
+        } else {
+            panel.style.display = 'none';
+            tab.style.background = '#f8fafc';
+            tab.style.color = '#64748b';
+            tab.style.borderColor = '#e2e8f0';
+        }
+    }
+}
+
+function switchMainView(view) {
+    var list = document.getElementById("main-list-view");
+    var tree = document.getElementById("main-tree-view");
+    var btnList = document.getElementById("tab-list-view");
+    var btnTree = document.getElementById("tab-tree-view");
+    
+    const url = new URL(window.location);
+    
+    if(view === "list") {
+        list.style.display = "block";
+        tree.style.display = "none";
+        btnList.style.background = "linear-gradient(135deg,#7c3aed,#5b21b6)"; btnList.style.color = "#fff"; btnList.style.border = "none";
+        btnTree.style.background = "#f8fafc"; btnTree.style.color = "#64748b"; btnTree.style.border = "1px solid #e2e8f0";
+        url.searchParams.delete('view');
+    } else {
+        list.style.display = "none";
+        tree.style.display = "block";
+        btnTree.style.background = "linear-gradient(135deg,#7c3aed,#5b21b6)"; btnTree.style.color = "#fff"; btnTree.style.border = "none";
+        btnList.style.background = "#f8fafc"; btnList.style.color = "#64748b"; btnList.style.border = "1px solid #e2e8f0";
+        url.searchParams.set('view', 'tree');
+    }
+    
+    window.history.replaceState({}, '', url);
+}
+
+// Auto-switch to tree view if the URL has ?view=tree
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('view') === 'tree') {
+    switchMainView('tree');
+}
+
+// Handle Click-to-Expand functionality
+function toggleChildren(e, btn) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Find the next sibling <ul> element inside the parent <li>
+    const li = btn.closest('li');
+    const ul = li.querySelector(':scope > ul');
+    
+    if (ul) {
+        if (ul.style.display === 'none') {
+            ul.style.display = 'flex';
+            btn.innerHTML = '-';
+        } else {
+            ul.style.display = 'none';
+            btn.innerHTML = '+';
+        }
+    }
+}
+
+function collapseAllTree() {
+    const treeContainer = document.getElementById('main-tree-view');
+    if (!treeContainer) return;
+    
+    // Hide all nested lists
+    const nestedLists = treeContainer.querySelectorAll('ul.nested-tree');
+    nestedLists.forEach(ul => {
+        ul.style.display = 'none';
+    });
+    
+    // Reset all toggle buttons to '+'
+    const toggleBtns = treeContainer.querySelectorAll('.toggle-btn');
+    toggleBtns.forEach(btn => {
+        btn.innerHTML = '+';
+    });
+}
+</script>
+
+    </main><!-- /content -->
+  </div><!-- /main wrap -->
+</div><!-- /flex wrapper -->
+
+<script>
+function toggleSidebar() {
+    var s = document.getElementById('dashSidebar');
+    var o = document.getElementById('dashOverlay');
+    s.classList.toggle('-translate-x-full');
+    o.classList.toggle('hidden');
+}
+function closeSidebar() {
+    document.getElementById('dashSidebar').classList.add('-translate-x-full');
+    document.getElementById('dashOverlay').classList.add('hidden');
+}
+</script>
+</body>
+</html>
+

@@ -16,6 +16,9 @@ $page_title = 'General Settings';
 $active_nav = 'gensettings';
 include("layout_header.php");
 
+// Ensure referral bonus columns exist
+ensure_settings_referral_schema($pdo);
+
 // Fetch settings
 $query = "SELECT * FROM settings LIMIT 1";
 $result = mysqli_query($con, $query);
@@ -41,6 +44,10 @@ if ($row = mysqli_fetch_array($result)) {
     $smtp_username = $row['smtp_username'] ?? '';
     $smtp_password = $row['smtp_password'] ?? '';
     $smtp_encryption = $row['smtp_encryption'] ?? 'tls';
+
+    // Referral Bonus Settings
+    $referral_bonus_referrer = $row['referral_bonus_referrer'] ?? 50.00;
+    $admin_referral_bonus = $row['admin_referral_bonus'] ?? 25.00;
 }
 
 // Fetch current gateway statuses securely
@@ -81,6 +88,26 @@ $alwdpaypal = $gateway_paypal_row['status'] ?? 0;
             <div class="mb-2">
                 <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Admin Notification Email</label>
                 <input type="email" value="<?php print mlmp_escape($email); ?>" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="e.g., admin@yourwebsite.com" name="coemail" required>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 1.5: Referral & Joining Bonus Settings -->
+    <div class="bg-white border border-slate-200 shadow-sm rounded-2xl shadow-xl flex flex-col overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-gift text-indigo-600"></i> Referral & Joining Bonus Settings
+        </div>
+        <div class="p-6 flex flex-col gap-4">
+            <div class="mb-2">
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Sponsor Referral Bonus (Referrer)</label>
+                <input type="number" step="0.01" value="<?php print mlmp_escape($referral_bonus_referrer); ?>" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="e.g., 50.00" name="referral_bonus_referrer" required>
+                <small class="block mt-1.5 text-xs text-slate-600">The bonus amount credited to the referrer when a new member joins.</small>
+            </div>
+            
+            <div class="mb-2">
+                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Admin Joining Bonus</label>
+                <input type="number" step="0.01" value="<?php print mlmp_escape($admin_referral_bonus); ?>" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="e.g., 25.00" name="admin_referral_bonus" required>
+                <small class="block mt-1.5 text-xs text-slate-600">The bonus amount credited to the Admin for every new member join.</small>
             </div>
         </div>
     </div>

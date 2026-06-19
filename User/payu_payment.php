@@ -53,6 +53,17 @@ if (empty($username) || !isset($_SESSION['signup_data'])) {
     exit;
 }
 
+// Prevent active users from paying again (e.g. if they hit Back after successful payment)
+$stmtUser = $pdo->prepare("SELECT active FROM affiliateuser WHERE username = ?");
+$stmtUser->execute([$username]);
+$u = $stmtUser->fetch();
+if ($u && $u['active'] == 1) {
+    unset($_SESSION['reg_username']);
+    unset($_SESSION['signup_data']);
+    header("Location: dashboard.php");
+    exit;
+}
+
 $signup_data = $_SESSION['signup_data'];
 $firstname = $signup_data['fname'];
 $email = $signup_data['email'];
@@ -327,7 +338,8 @@ $_layout_brand = 'MLM';
                     </div>
                 </div>
 
-                <form action="<?php echo $PAYU_BASE_URL; ?>" method="post" name="payuForm">
+                <form action="payu_checkout_redirect.php" method="post" name="payuForm">
+                    <input type="hidden" name="PAYU_BASE_URL" value="<?php echo $PAYU_BASE_URL; ?>" />
                     <input type="hidden" name="key" value="<?php echo $MERCHANT_KEY; ?>" />
                     <input type="hidden" name="hash" value="<?php echo htmlspecialchars($hash, ENT_QUOTES, 'utf-8'); ?>" />
                     <input type="hidden" name="txnid" value="<?php echo $txnid; ?>" />

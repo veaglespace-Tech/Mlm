@@ -63,75 +63,54 @@ if (!$user) {
     if ($pendingUser) {
         $ref = $pendingUser['referedby'];
         
-        // Extreme Leg Spillover Placement detection OR Admin Multi-Board Logic
+        // UNIVERSAL MULTI-BOARD UNILEVEL PAIR LOGIC (applies to ALL users including admin)
         $sponsor = mlmp_pdo_fetch($pdo, "SELECT Id, level, default_leg, left_count, right_count FROM affiliateuser WHERE username = ? LIMIT 1", [$ref]);
         $sponsorId = (int)($sponsor['Id'] ?? 0);
         $parentId = $sponsorId;
         $position = 'L'; // default fallback
 
         if ($sponsorId > 0) {
-            if (isset($sponsor['level']) && (int)$sponsor['level'] === 1) {
-                // ADMIN MULTI-BOARD LOGIC (Unilevel pair system)
-                $stmtBoards = $pdo->prepare("SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC");
-                $stmtBoards->execute([$ref, $ref . '_bc_%']);
-                $boards = $stmtBoards->fetchAll();
-                
-                $placed = false;
-                $boardCount = count($boards);
-                foreach ($boards as $board) {
-                    $bId = (int)$board['Id'];
-                    $hasLeft = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'L'", [$bId]);
-                    if ($hasLeft == 0) {
-                        $parentId = $bId;
-                        $position = 'L';
-                        $placed = true;
-                        break;
-                    }
-                    $hasRight = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'R'", [$bId]);
-                    if ($hasRight == 0) {
-                        $parentId = $bId;
-                        $position = 'R';
-                        $placed = true;
-                        break;
-                    }
-                }
-                
-                if (!$placed) {
-                    // Create a new Admin Pair Board
-                    $newBoardNum = $boardCount + 1;
-                    $newBoardUsername = $ref . '_bc_' . $newBoardNum;
-                    
-                    $sqlVirtual = "INSERT INTO affiliateuser (username, password, fname, address, email, referedby, mobile, active, launch, parent_id, position, level) 
-                                   VALUES (?, 'VIRTUAL', 'Admin Board {$newBoardNum}', '', '', 'none', '', 1, 1, 0, NULL, 1)";
-                    mlmp_pdo_execute($pdo, $sqlVirtual, [$newBoardUsername]);
-                    
-                    $newVirtualNode = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE username = ?", [$newBoardUsername]);
-                    $parentId = (int)$newVirtualNode['Id'];
+            // MULTI-BOARD LOGIC: Works for ALL users (Unilevel pair system)
+            // Collects the sponsor's main account + all virtual _bc_ boards, then places the new user
+            // in the first available L or R slot. If all boards are full, creates a new virtual board.
+            $stmtBoards = $pdo->prepare("SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC");
+            $stmtBoards->execute([$ref, $ref . '_bc_%']);
+            $boards = $stmtBoards->fetchAll();
+
+            $placed = false;
+            $boardCount = count($boards);
+            foreach ($boards as $board) {
+                $bId = (int)$board['Id'];
+                $hasLeft = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'L'", [$bId]);
+                if ($hasLeft == 0) {
+                    $parentId = $bId;
                     $position = 'L';
+                    $placed = true;
+                    break;
                 }
-            } else {
-                // NORMAL USER EXTREME LEG SPILLOVER LOGIC
-                $prefLeg = $sponsor['default_leg'] ?? 'AUTO';
-                
-                if ($prefLeg === 'AUTO') {
-                    $lCount = (int)($sponsor['left_count'] ?? 0);
-                    $rCount = (int)($sponsor['right_count'] ?? 0);
-                    $prefLeg = ($rCount < $lCount) ? 'R' : 'L';
+                $hasRight = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'R'", [$bId]);
+                if ($hasRight == 0) {
+                    $parentId = $bId;
+                    $position = 'R';
+                    $placed = true;
+                    break;
                 }
-                
-                $currentId = $sponsorId;
-                $found = false;
-                
-                while (!$found) {
-                    $child = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE parent_id = ? AND position = ? LIMIT 1", [$currentId, $prefLeg]);
-                    if ($child) {
-                        $currentId = (int)$child['Id'];
-                    } else {
-                        $parentId = $currentId;
-                        $position = $prefLeg;
-                        $found = true;
-                    }
-                }
+            }
+
+            if (!$placed) {
+                // All existing boards are full — create a new virtual Pair Board for this user
+                $newBoardNum = $boardCount + 1;
+                $newBoardUsername = $ref . '_bc_' . $newBoardNum;
+                $boardLabel = 'Board ' . $newBoardNum;
+
+                $sponsorLevel = (int)($sponsor['level'] ?? 2);
+                $sqlVirtual = "INSERT INTO affiliateuser (username, password, fname, address, email, referedby, mobile, active, launch, parent_id, position, level)
+                               VALUES (?, 'VIRTUAL', ?, '', '', 'none', '', 1, 1, 0, NULL, ?)";
+                mlmp_pdo_execute($pdo, $sqlVirtual, [$newBoardUsername, $boardLabel, $sponsorLevel]);
+
+                $newVirtualNode = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE username = ?", [$newBoardUsername]);
+                $parentId = (int)$newVirtualNode['Id'];
+                $position = 'L';
             }
         }
 
@@ -188,7 +167,13 @@ $stmtCheck = $pdo->prepare($queryPaymentExists);
 $stmtCheck->execute([$txnid]);
 $paymentCount = $stmtCheck->fetchColumn();
 
-if ($paymentCount == 0 && !empty($txnid)) {
+// Prevent duplicate payment entry for the same package registration (e.g. if user paid from multiple tabs)
+$queryExistingPck = "SELECT COUNT(*) FROM payu_payments WHERE orderid = ? AND pckid = ?";
+$stmtCheckPck = $pdo->prepare($queryExistingPck);
+$stmtCheckPck->execute([$uaid, $pcktaken]);
+$pckCount = $stmtCheckPck->fetchColumn();
+
+if ($paymentCount == 0 && !empty($txnid) && $pckCount == 0) {
     $queryInsertPayment = "INSERT INTO payu_payments (orderid, transacid, price, currency, date, pckid, gateway) VALUES (?, ?, ?, 'INR', NOW(), ?, 'PayU')";
     $stmtInsert = $pdo->prepare($queryInsertPayment);
     $stmtInsert->execute([$uaid, $txnid, $amount, $pcktaken]);
@@ -238,6 +223,7 @@ $_SESSION['username'] = $username;
 unset($_SESSION['reg_username']);
 unset($_SESSION['selected_product']);
 unset($_SESSION['payu_txn']);
+unset($_SESSION['checkout_lock']);
 ?>
 <!DOCTYPE html>
 <html lang="en" class="dark">

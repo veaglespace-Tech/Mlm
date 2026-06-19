@@ -15,6 +15,7 @@ if (!isset($_SESSION['adminidusername'])) {
 $page_title = 'Packages Settings';
 $active_nav = 'pacsettings';
 include("layout_header.php");
+ensure_package_schema($pdo);
 
 // Fetch all packages for the grid
 $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");

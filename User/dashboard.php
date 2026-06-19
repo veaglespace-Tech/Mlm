@@ -79,6 +79,24 @@ $mpay_val = (float)($mpay ?? 0.0);
 $left     = $mpay_val - $ear_val;
 $pro      = ($mpay_val > 0) ? min(100, ($ear_val / $mpay_val) * 100) : (($ear_val > 0) ? 100 : 0);
 
+// Pair commission breakdown
+$pair_comm_row = mlmp_pdo_fetch($pdo, "SELECT SUM(net_amount) as pair_total FROM pairing_transactions WHERE user_id = ?", [$aid]);
+$pair_commission = (float)($pair_comm_row['pair_total'] ?? 0);
+// Direct bonus = Total earnings - Pair commissions
+$direct_bonus = max(0.0, $ear_val - $pair_commission);
+
+// Daily / Weekly / Monthly Earnings from pairing_transactions
+$daily_pair  = (float)(mlmp_pdo_fetch($pdo, "SELECT COALESCE(SUM(net_amount),0) as v FROM pairing_transactions WHERE user_id = ? AND DATE(created_at) = CURDATE()", [$aid])['v'] ?? 0);
+$weekly_pair = (float)(mlmp_pdo_fetch($pdo, "SELECT COALESCE(SUM(net_amount),0) as v FROM pairing_transactions WHERE user_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", [$aid])['v'] ?? 0);
+$monthly_pair= (float)(mlmp_pdo_fetch($pdo, "SELECT COALESCE(SUM(net_amount),0) as v FROM pairing_transactions WHERE user_id = ? AND MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())", [$aid])['v'] ?? 0);
+
+// Daily / Weekly / Monthly total (pair + referral bonuses)
+// For referral bonuses we track them as the difference between tamount growth (approximate via pairing_transactions)
+// We show pair commission breakdown per period, and total is from tamount
+$daily_total  = $daily_pair;   // pair is the trackable part; referral bonuses are credited immediately
+$weekly_total = $weekly_pair;
+$monthly_total= $monthly_pair;
+
 // Last referral
 $referusername = "-"; $refcountry = "-"; $refdate = "-"; $refpckname = "-";
 $last_ref = mlmp_pdo_fetch($pdo, "SELECT username, country, doj, pcktaken FROM affiliateuser WHERE referedby = ? ORDER BY Id DESC LIMIT 1", [$_SESSION['username']]);
@@ -135,96 +153,152 @@ include_once("layout_header.php");
   </div>
 </div>
 
-<!-- Fast Start Binary Qualification Alert -->
+<!-- Pair Commission Qualification & Countdown Alert -->
 <?php 
-if ($acti != 1 || empty($launch_time)) {
-    // Not launched yet
+if ($acti != 1) {
+    // Not active yet
     echo '<div class="bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-5 mb-7 flex items-center gap-4 shadow-sm">
             <div class="w-12 h-12 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-hourglass-start"></i></div>
             <div>
-                <h4 class="font-bold text-slate-800 text-[15px] mb-1">Fast Start Timer Pending</h4>
-                <p class="text-sm text-slate-600 mb-0">Your 24-hour countdown to qualify for Pair Commissions will begin exactly when your account is activated.</p>
+                <h4 class="font-bold text-slate-800 text-[15px] mb-1">Pair Timer Pending</h4>
+                <p class="text-sm text-slate-600 mb-0">Your per-pair 24-hour countdowns to qualify for commissions will begin when your account is activated and referrals start joining.</p>
             </div>
           </div>';
 } else {
-    if ($is_binary_qualified === 1) {
-        // Qualified
-        echo '<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 md:p-5 mb-7 flex items-center gap-4 shadow-sm relative overflow-hidden">
-                <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-emerald-100 to-transparent pointer-events-none"></div>
-                <div class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-emerald-500/30"><i class="fa-solid fa-medal"></i></div>
-                <div class="relative z-10">
-                    <h4 class="font-bold text-emerald-900 text-[15px] mb-1">Binary Qualified! <i class="fa-solid fa-circle-check text-emerald-600 ml-1"></i></h4>
-                    <p class="text-sm text-emerald-700 mb-0">Congratulations! You completed your first pair within 24 hours. Pair Commissions are unlocked for life.</p>
-                </div>
-              </div>';
-    } else {
+    // Check if there is an active countdown for a pending pair
+    $pending_pair = mlmp_pdo_fetch($pdo, "SELECT pair_no, first_member_joined_at FROM pair_countdowns WHERE user_id = ? AND completed_at IS NULL ORDER BY pair_no ASC LIMIT 1", [$aid]);
+    if ($pending_pair) {
         $db_now_row = mlmp_pdo_fetch($pdo, "SELECT NOW() as db_now");
         $now = strtotime($db_now_row['db_now']);
-        $lt = strtotime($launch_time);
-        $hours_left = 24 - (($now - $lt) / 3600);
+        $first_joined = strtotime($pending_pair['first_member_joined_at']);
+        $hours_left = 24 - (($now - $first_joined) / 3600);
         
         if ($hours_left > 0) {
-            // Still have time
+            // Countdown is active
             $hrs = floor($hours_left);
             $mins = floor(($hours_left - $hrs) * 60);
             echo '<div class="bg-amber-50 border border-amber-300 rounded-xl p-4 md:p-5 mb-7 flex items-center gap-4 shadow-sm relative overflow-hidden">
                     <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-amber-100 to-transparent pointer-events-none"></div>
                     <div class="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-amber-500/30 animate-pulse"><i class="fa-solid fa-stopwatch"></i></div>
                     <div class="relative z-10">
-                        <h4 class="font-bold text-amber-900 text-[15px] mb-1">Urgent: Fast Start Qualification!</h4>
-                        <p class="text-sm text-amber-800 mb-0">You must complete your first Pair (1 Left, 1 Right) within <b>24 hours</b> to unlock Pair Commissions.</p>
+                        <h4 class="font-bold text-amber-900 text-[15px] mb-1">Active Countdown: Pair #' . htmlspecialchars($pending_pair['pair_no']) . '</h4>
+                        <p class="text-sm text-amber-800 mb-0">A member joined one side of this pair. You must place a member on the other leg within <b>24 hours</b> to qualify for this commission!</p>
                         <div class="mt-2 inline-flex items-center gap-2 bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200">
                             <i class="fa-regular fa-clock"></i> Time Remaining: '.$hrs.' hours, '.$mins.' minutes
                         </div>
                     </div>
                   </div>';
         } else {
-            // Failed
+            // Expired
             echo '<div class="bg-red-50 border border-red-200 rounded-xl p-4 md:p-5 mb-7 flex items-center gap-4 shadow-sm">
                     <div class="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-circle-xmark"></i></div>
                     <div>
-                        <h4 class="font-bold text-red-900 text-[15px] mb-1">Fast Start Window Closed</h4>
-                        <p class="text-sm text-red-700 mb-0">The 24-hour window to unlock Pair Commissions has expired.</p>
+                        <h4 class="font-bold text-red-900 text-[15px] mb-1">Countdown Expired: Pair #' . htmlspecialchars($pending_pair['pair_no']) . '</h4>
+                        <p class="text-sm text-red-700 mb-0">The 24-hour window to complete this pair has expired. Commission for this pair is forfeited.</p>
                     </div>
                   </div>';
         }
+    } else {
+        // No pending pair
+        echo '<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 md:p-5 mb-7 flex items-center gap-4 shadow-sm relative overflow-hidden">
+                <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-emerald-100 to-transparent pointer-events-none"></div>
+                <div class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-emerald-500/30"><i class="fa-solid fa-medal"></i></div>
+                <div class="relative z-10">
+                    <h4 class="font-bold text-emerald-900 text-[15px] mb-1">Pairs Status: Normal <i class="fa-solid fa-circle-check text-emerald-600 ml-1"></i></h4>
+                    <p class="text-sm text-emerald-700 mb-0">All your active pairs are complete. Once a member joins on one leg of a new pair, the 24-hour countdown for that pair will begin.</p>
+                </div>
+              </div>';
     }
 }
 ?>
 
 <!-- Stat Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-7">
-  <!-- Card 1 -->
+  <!-- Card 1: Total Earnings -->
   <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-[22px] flex flex-col gap-2.5 relative overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-purple-300 transition-all duration-300">
     <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 to-indigo-400"></div>
     <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-indian-rupee-sign"></i></div>
     <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Total Earnings</div>
-    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur) . ' ' . number_format((float)$ear, 2); ?></div>
+    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur) . ' ' . number_format($ear_val, 2); ?></div>
     <div class="text-xs text-slate-600 font-medium"><?php echo $pname ? mlmp_escape($pname) . ' package' : 'No package'; ?></div>
   </div>
-  <!-- Card 2 -->
+  <!-- Card 2: Pair Commission -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-[22px] flex flex-col gap-2.5 relative overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-cyan-300 transition-all duration-300">
+    <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-cyan-500 to-teal-400"></div>
+    <div class="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-arrows-left-right"></i></div>
+    <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Pair Commission</div>
+    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur ?: 'INR') . ' ' . number_format($pair_commission, 2); ?></div>
+    <div class="text-xs text-cyan-600 font-medium">Binary pair earnings (after TDS)</div>
+  </div>
+  <!-- Card 3: Direct Referral Bonus -->
   <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-[22px] flex flex-col gap-2.5 relative overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-emerald-300 transition-all duration-300">
     <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 to-emerald-400"></div>
-    <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-users"></i></div>
-    <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Direct Referrals</div>
-    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($numrows); ?></div>
-    <div class="text-xs text-slate-600 font-medium">Total team members</div>
+    <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+    <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Direct Referral Bonus</div>
+    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur ?: 'INR') . ' ' . number_format($direct_bonus, 2); ?></div>
+    <div class="text-xs text-emerald-600 font-medium"><?php echo mlmp_escape($numrows); ?> direct referral(s)</div>
   </div>
-  <!-- Card 3 -->
-  <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-[22px] flex flex-col gap-2.5 relative overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-blue-300 transition-all duration-300">
-    <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 to-blue-400"></div>
-    <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-wallet"></i></div>
-    <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Min. Payout Target</div>
-    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur) . ' ' . number_format($mpay_val, 0); ?></div>
-    <div class="text-xs text-slate-600 font-medium"><?php echo number_format($pro, 0); ?>% achieved</div>
-  </div>
-  <!-- Card 4 -->
+  <!-- Card 4: Payout Progress -->
   <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-[22px] flex flex-col gap-2.5 relative overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-md hover:border-amber-300 transition-all duration-300">
     <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-500 to-amber-400"></div>
-    <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-user-plus"></i></div>
-    <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Last Referral</div>
-    <div class="text-[18px] font-extrabold text-slate-900 leading-tight truncate"><?php echo $referusername !== '-' ? mlmp_escape($referusername) : '-'; ?></div>
-    <div class="text-xs text-slate-600 font-medium"><?php echo $refdate !== '-' ? date('d M Y', strtotime($refdate)) : 'No referrals yet'; ?></div>
+    <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-wallet"></i></div>
+    <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Min. Payout Target</div>
+    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur) . ' ' . number_format($mpay_val, 0); ?></div>
+    <div class="text-xs text-amber-600 font-medium"><?php echo number_format($pro, 0); ?>% achieved so far</div>
+  </div>
+</div>
+
+<!-- Daily / Weekly / Monthly Earnings Section -->
+<div class="bg-white border border-slate-200 rounded-2xl shadow-sm mb-7 overflow-hidden">
+  <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
+    <span class="w-7 h-7 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center text-[13px]"><i class="fa-solid fa-chart-column"></i></span>
+    <div class="text-sm font-bold text-slate-900">Pair Commission Breakdown</div>
+    <span class="ml-auto text-[11px] font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">Live Stats</span>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+
+    <!-- Today -->
+    <div class="p-5 sm:p-7 flex items-center gap-4 group hover:bg-slate-50 transition-colors">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl shrink-0 shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+        <i class="fa-solid fa-sun"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.8px] mb-0.5">Today's Earnings</div>
+        <div class="text-[22px] font-extrabold text-slate-900 leading-tight">
+          <?php echo htmlspecialchars($pcur ?: 'INR', ENT_QUOTES, 'UTF-8') . ' ' . number_format($daily_pair, 2); ?>
+        </div>
+        <div class="text-[11px] text-blue-600 font-semibold mt-0.5">Pair commission (after TDS)</div>
+      </div>
+    </div>
+
+    <!-- This Week -->
+    <div class="p-5 sm:p-7 flex items-center gap-4 group hover:bg-slate-50 transition-colors">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xl shrink-0 shadow-md shadow-violet-500/20 group-hover:scale-105 transition-transform">
+        <i class="fa-solid fa-calendar-week"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.8px] mb-0.5">This Week (7 Days)</div>
+        <div class="text-[22px] font-extrabold text-slate-900 leading-tight">
+          <?php echo htmlspecialchars($pcur ?: 'INR', ENT_QUOTES, 'UTF-8') . ' ' . number_format($weekly_pair, 2); ?>
+        </div>
+        <div class="text-[11px] text-violet-600 font-semibold mt-0.5">Pair commission (after TDS)</div>
+      </div>
+    </div>
+
+    <!-- This Month -->
+    <div class="p-5 sm:p-7 flex items-center gap-4 group hover:bg-slate-50 transition-colors">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl shrink-0 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+        <i class="fa-solid fa-calendar-days"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.8px] mb-0.5">This Month</div>
+        <div class="text-[22px] font-extrabold text-slate-900 leading-tight">
+          <?php echo htmlspecialchars($pcur ?: 'INR', ENT_QUOTES, 'UTF-8') . ' ' . number_format($monthly_pair, 2); ?>
+        </div>
+        <div class="text-[11px] text-emerald-600 font-semibold mt-0.5">Pair commission (after TDS)</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -385,6 +459,7 @@ if ($acti != 1 || empty($launch_time)) {
         <div class="text-[12px] text-slate-600 font-semibold uppercase tracking-[0.7px] mb-2.5">Quick Links</div>
         <div class="flex flex-wrap gap-2">
           <a href="downline.php" class="text-[12px] font-medium text-purple-600 px-3 py-1.5 bg-purple-100 rounded-md border border-purple-200 hover:bg-purple-200 hover:text-purple-700 transition-colors">Downline</a>
+          <a href="my_referrals.php" class="text-[12px] font-medium text-indigo-600 px-3 py-1.5 bg-indigo-100 rounded-md border border-indigo-200 hover:bg-indigo-200 hover:text-indigo-700 transition-colors">My Referrals</a>
           <a href="paymentshistory.php" class="text-[12px] font-medium text-blue-600 px-3 py-1.5 bg-blue-100 rounded-md border border-blue-200 hover:bg-blue-200 hover:text-blue-700 transition-colors">Payments</a>
           <a href="profile.php" class="text-[12px] font-medium text-emerald-600 px-3 py-1.5 bg-emerald-100 rounded-md border border-emerald-200 hover:bg-emerald-200 hover:text-emerald-700 transition-colors">Profile</a>
           <a href="contact.php" class="text-[12px] font-medium text-amber-600 px-3 py-1.5 bg-amber-100 rounded-md border border-amber-200 hover:bg-amber-200 hover:text-amber-700 transition-colors">Help</a>

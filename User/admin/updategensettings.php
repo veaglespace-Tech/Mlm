@@ -45,6 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $smtp_password = $_POST['smtp_password'] ?? '';
     $smtp_encryption = $_POST['smtp_encryption'] ?? 'tls';
 
+    $referral_bonus_referrer = (float)($_POST['referral_bonus_referrer'] ?? 50.00);
+    $admin_referral_bonus = (float)($_POST['admin_referral_bonus'] ?? 25.00);
+
     if (strlen($wlink) < 2) {
         $msg .= "Website Link cannot be empty.<BR>";
         $status = "NOTOK";
@@ -102,7 +105,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     smtp_port = ?,
                     smtp_username = ?,
                     smtp_password = ?,
-                    smtp_encryption = ?
+                    smtp_encryption = ?,
+                    referral_bonus_referrer = ?,
+                    admin_referral_bonus = ?
                     WHERE sno = ?";
             
             $stmt = $pdo->prepare($sql);
@@ -127,6 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $smtp_username,
                 $smtp_password,
                 $smtp_encryption,
+                $referral_bonus_referrer,
+                $admin_referral_bonus,
                 $sno
             ]);
             

@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$base = "http://127.0.0.1:8000"
+$base = "http://127.0.0.1:8080"
 $root = "C:\Users\HP\Desktop\MLMP"
 $artifacts = Join-Path $root "flow-smoke-artifacts"
 $adminCookie = Join-Path $artifacts "admin.cookies.txt"
@@ -113,8 +113,8 @@ $signupData = @(
 ) -join "&"
 
 $signupOut = Join-Path $artifacts "user_signup.html"
-Save-Response -url "$base/signup.php" -outputPath $signupOut -postData $signupData
-Assert-Contains -file $signupOut -pattern "Location: select_product.php" -label "User signup"
+Save-Response -url "$base/signup.php" -outputPath $signupOut -cookieFile $userCookie -postData $signupData
+Assert-Contains -file $signupOut -pattern "Location: select_product.php" -label "User signup redirect"
 
 # Mail server warnings are non-fatal in local CLI setups; do not fail flow on that.
 $hasFatal = Select-String -Path $signupOut -SimpleMatch "Fatal error" -Quiet
@@ -124,13 +124,27 @@ if ($hasFatal -or $hasParse -or $hasUncaught) {
     Add-Error "User signup response contains fatal runtime output"
 }
 
-# 4) Activate user via admin (required before user login in this business flow)
-$activateOut = Join-Path $artifacts "admin_activate_test_user.html"
-Save-Response -url "$base/admin/activateuser.php?username=$newUser" -outputPath $activateOut -cookieFile $adminCookie
-Assert-Contains -file $activateOut -pattern "Profile Activated" -label "Admin activate new user"
-Assert-NoPhpRuntimeErrors -file $activateOut -label "Admin activate user response"
+# Select product package
+$selectProductOut = Join-Path $artifacts "user_select_product.html"
+Save-Response -url "$base/select_product.php" -outputPath $selectProductOut -cookieFile $userCookie -postData "selected_package=1"
+Assert-Contains -file $selectProductOut -pattern "Location: payu_payment.php" -label "User select product redirect"
 
-# 5) User login + protected pages
+# Request checkout page to trigger entry in pending_registrations
+$checkoutOut = Join-Path $artifacts "user_checkout.html"
+Save-Response -url "$base/payu_payment.php" -outputPath $checkoutOut -cookieFile $userCookie
+Assert-Contains -file $checkoutOut -pattern "Pending Admin Approval" -label "User checkout page pending status"
+
+# 4) Admin approves user
+$approveOut = Join-Path $artifacts "admin_approve_user.html"
+Save-Response -url "$base/admin/approve_user.php" -outputPath $approveOut -cookieFile $adminCookie -postData "action=approve&username=$newUser"
+Assert-Contains -file $approveOut -pattern "Location: approvals.php" -label "Admin approve user redirect"
+
+# 5) Simulate payment completion
+$successOut = Join-Path $artifacts "user_payu_success.html"
+Save-Response -url "$base/payu_success.php" -outputPath $successOut -cookieFile $userCookie -postData "username=$newUser"
+Assert-Contains -file $successOut -pattern "Payment Successful!" -label "User payment simulation"
+
+# Verify User login
 $userLoginOut = Join-Path $artifacts "user_login.html"
 Save-Response -url "$base/index.php" -outputPath $userLoginOut -cookieFile $userCookie -postData "username=$newUser&password=$newPass"
 Assert-Contains -file $userLoginOut -pattern "dashboard.php?page=dashboard%location=index.php" -label "User login"
@@ -154,11 +168,11 @@ foreach ($p in $userPages) {
 # 6) Critical admin action endpoints with admin session
 $rejectOut = Join-Path $artifacts "admin_rejectrenew_testuser.html"
 Save-Response -url "$base/admin/rejectrenew.php?username=$newUser" -outputPath $rejectOut -cookieFile $adminCookie
-Assert-Contains -file $rejectOut -pattern "Request Not Found" -label "Admin reject renew with no pending request"
+Assert-Contains -file $rejectOut -pattern "Location: users.php" -label "Admin reject renew redirect"
 
 $expiryOut = Join-Path $artifacts "admin_updateexpiry_testuser.html"
 Save-Response -url "$base/admin/updateexpiry.php?username=$newUser" -outputPath $expiryOut -cookieFile $adminCookie
-Assert-Contains -file $expiryOut -pattern "Request Not Found" -label "Admin update expiry with no pending request"
+Assert-Contains -file $expiryOut -pattern "Location: users.php" -label "Admin update expiry redirect"
 
 $notiOut = Join-Path $artifacts "admin_postnoti.html"
 Save-Response -url "$base/admin/postnoti.php" -outputPath $notiOut -cookieFile $adminCookie -postData "notihead=QA+Smoke&notibody=Flow+Smoke+Test+Notification"

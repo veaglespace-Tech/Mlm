@@ -1,0 +1,113 @@
+HTTP/1.1 200 OK
+Host: 127.0.0.1:8080
+Date: Tue, 16 Jun 2026 13:49:17 GMT
+Connection: close
+X-Powered-By: PHP/8.2.31
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Payment Successful - MLM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="css/dashboard-modern.css?v=2.0"/>`n<style>
+.checkout-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg-body);
+}
+.checkout-panel {
+    max-width: 480px;
+    width: 100%;
+}
+.pop-check {
+    animation: popCheck 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@keyframes popCheck {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.auto-loader {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-purple);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.btn-dash {
+    width: 100%;
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.1s;
+}
+.btn-dash:hover {
+    opacity: 0.9;
+    color: white;
+}
+.btn-dash:active {
+    transform: scale(0.98);
+}
+</style>
+</head>
+<body class="dash-body">
+
+<div class="checkout-wrapper">
+    <div class="dash-panel checkout-panel">
+        <div class="dash-panel-body" style="padding: 40px 24px; text-align:center;">
+            
+            <div class="pop-check" style="width:72px; height:72px; background:rgba(5, 150, 105, 0.1); border:1px solid rgba(5, 150, 105, 0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; margin: 0 auto 24px auto;">
+                <i class="fa-solid fa-circle-check" style="color:var(--accent-green); font-size: 32px;"></i>
+            </div>
+
+            <h2 style="color:var(--text-primary); font-size:22px; font-weight:700; margin-bottom:12px;">Payment Successful!</h2>
+            <p style="color:var(--text-muted); font-size:14px; line-height:1.6; margin-bottom:32px;">
+                Welcome, <strong style="color:var(--accent-purple);">@qa0616191912</strong>. Your affiliate account is active and your starter product <strong style="color:var(--text-primary);">Starter Plan</strong> has been successfully registered.
+            </p>
+
+            <div style="border-top: 1px solid var(--border-color); margin: 24px 0; padding-top: 24px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+                <span style="font-size:12px; color:var(--text-secondary);">Redirecting to your dashboard...</span>
+                <div class="auto-loader"></div>
+            </div>
+
+            <a href="dashboard.php" class="btn-dash">
+                Go to Dashboard <i class="fa-solid fa-arrow-right" style="font-size:12px;"></i>
+            </a>
+
+        </div>
+    </div>
+</div>
+
+<script>
+setTimeout(function() {
+    window.location = "dashboard.php";
+}, 3000);
+</script>
+</body>
+</html>

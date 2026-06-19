@@ -1,0 +1,484 @@
+HTTP/1.1 200 OK
+Host: 127.0.0.1:8080
+Date: Tue, 16 Jun 2026 13:49:12 GMT
+Connection: close
+X-Powered-By: PHP/8.2.31
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Packages Settings - Header Admin</title>
+<meta name="description" content="Packages Settings - Header admin portal."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+/* Custom Scrollbar for a polished look */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+</style>
+</head>
+<body class="font-['Inter'] bg-slate-50 text-slate-800 min-h-screen overflow-x-hidden selection:bg-indigo-500/30">
+
+<!-- Mobile overlay -->
+<div id="dashOverlay" class="fixed inset-0 bg-black/60 z-40 hidden backdrop-blur-sm transition-opacity" onclick="closeSidebar()"></div>
+
+<div class="flex min-h-screen">
+
+  <!-- ======== SIDEBAR ======== -->
+  <aside id="dashSidebar" class="w-[260px] bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
+
+    <!-- Logo -->
+    <div class="px-5 pt-6 pb-4 border-b border-slate-100 flex items-center gap-2.5">
+      <span class="text-[17px] font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent whitespace-nowrap">Header</span>
+    </div>
+
+    <!-- User block -->
+    <div class="px-5 py-4 flex items-center gap-3 border-b border-slate-100">
+      <div class="relative shrink-0">
+        <img src="images/a0.jpg" alt="Avatar"
+             class="w-11 h-11 rounded-full border-2 border-indigo-100 object-cover"
+             onerror="this.src='https://ui-avatars.com/api/?name=Full+Admin+Name&background=6366f1&color=fff'">
+        <span class="absolute bottom-[1px] right-[1px] w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
+      </div>
+      <div class="flex flex-col">
+        <div class="text-sm font-semibold text-slate-900 leading-tight">Full Admin Name</div>
+        <div class="text-[11px] text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-full inline-block mt-1 w-max">
+          Administrator
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 overflow-y-auto">
+      <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Main Menu</div>
+      <a href="dashboard.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-gauge-high"></i></span>
+        Dashboard
+      </a>
+      <a href="downline.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-network-wired"></i></span>
+        My Network
+      </a>
+      <a href="my_referrals.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-user-plus"></i></span>
+        My Direct Referrals
+      </a>
+
+      <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Configuration</div>
+      <a href="gensettings.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-sliders"></i></span>
+        General Settings
+      </a>
+      <a href="emailsettings.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-envelope-open-text"></i></span>
+        E-Mail Settings
+      </a>
+      <a href="pacsettings.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors bg-indigo-50 text-indigo-700 border-l-[3px] border-indigo-500 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-cubes"></i></span>
+        Packages Settings
+      </a>
+      <a href="productsettings.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-store"></i></span>
+        Products Settings
+      </a>
+      <a href="backups/backup.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-database"></i></span>
+        Generate Backup
+      </a>
+
+      <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Announcements</div>
+      <a href="notifications.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-bullhorn"></i></span>
+        Post Notifications
+      </a>
+
+      <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Users & Sales</div>
+      <a href="approvals.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-user-check"></i></span>
+        Approval Requests
+      </a>
+      <a href="rejected_users.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-user-xmark"></i></span>
+        Rejected History
+      </a>
+      <a href="users.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-users"></i></span>
+        Users Directory
+      </a>
+      <a href="payments.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-credit-card"></i></span>
+        PayU Payments
+      </a>
+      <a href="payrequest.php" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-0.5 transition-colors text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-[13.5px] font-medium">
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-hand-holding-dollar"></i></span>
+        Payment Requests
+      </a>
+    </nav>
+
+    <!-- Sidebar footer -->
+    <div class="p-4 border-t border-slate-100">
+      <a href="logout.php" class="flex items-center gap-2 text-red-600 text-[13px] font-semibold px-3 py-2 rounded-lg hover:bg-red-50 transition-colors">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        Logout
+      </a>
+    </div>
+
+  </aside><!-- /sidebar -->
+
+  <!-- ======== MAIN ======== -->
+  <div class="flex-1 flex flex-col lg:ml-[260px] min-h-screen bg-slate-50 transition-all duration-300 w-full relative">
+
+    <!-- Topbar -->
+    <header class="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 sm:px-7 sticky top-0 z-30">
+      <div class="flex items-center gap-3.5">
+        <button onclick="toggleSidebar()" class="lg:hidden text-slate-600 hover:text-slate-900 text-xl p-1 focus:outline-none" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <span class="text-lg font-bold text-slate-900">Packages Settings</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="hidden sm:inline-block text-[12px] text-slate-600 font-medium mr-2">
+          <i class="fa-solid fa-earth-americas text-indigo-500 mr-1"></i> Country        </span>
+        <a href="profile.php">
+          <img class="w-9 h-9 rounded-full border-2 border-indigo-100 object-cover cursor-pointer hover:opacity-90 transition-opacity" src="images/a0.jpg" alt="Avatar"
+               onerror="this.src='https://ui-avatars.com/api/?name=Full+Admin+Name&background=6366f1&color=fff'">
+        </a>
+      </div>
+    </header>
+
+    <!-- Page Content starts here -->
+    <main class="flex-1 p-4 sm:p-7 overflow-x-hidden">
+
+
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+    <p class="text-sm text-blue-700"><strong>Important Instructions:</strong> Use the Manage Packages tab to edit or toggle package status. Create new packages under the Create Package tab. Set referral levels to 0 to disable them.</p>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden mb-6">
+    <div class="px-5 py-0 border-b border-slate-200 bg-slate-50">
+        <ul class="flex overflow-x-auto gap-2 no-scrollbar nav-tabs">
+            <li class="active"><a href="#manage" class="block px-4 py-4 text-sm font-bold text-slate-600 hover:text-indigo-600 border-b-2 border-transparent transition-all whitespace-nowrap"><i class="fa-solid fa-layer-group mr-1.5"></i> Manage Packages</a></li>
+            <li><a href="#create" class="block px-4 py-4 text-sm font-bold text-slate-600 hover:text-indigo-600 border-b-2 border-transparent transition-all whitespace-nowrap"><i class="fa-solid fa-plus mr-1.5"></i> Create Package</a></li>
+        </ul>
+    </div>
+    
+    <div class="p-6 bg-slate-50">
+        <div class="tab-content">
+            
+            <!-- Manage Packages Tab -->
+            <div class="tab-pane active" id="manage">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                    <div class="bg-white border border-indigo-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative">
+                                                                    <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden">
+                                        <div class="absolute transform rotate-45 bg-emerald-500 text-white text-[10px] font-bold py-1 right-[-35px] top-[15px] w-[120px] text-center shadow-sm">ACTIVE</div>
+                                    </div>
+                                                                
+                                <div class="p-5 border-b border-slate-100 flex-1">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <div class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg shadow-sm">
+                                            <i class="fa-solid fa-cube"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-bold text-slate-800 text-lg m-0">Starter Plan</h3>
+                                            <div class="text-xs font-semibold text-slate-500">ID: #1</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-100">
+                                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">Total Price</div>
+                                        <div class="text-2xl font-black text-slate-800 flex items-baseline gap-1">
+                                            <span class="text-lg">INR</span> 1,000.00                                        </div>
+                                        <div class="text-xs text-slate-500 mt-1 flex justify-between">
+                                            <span>Base: 1,000.00</span>
+                                            <span>Tax: 0.00</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-3 mb-2">
+                                        <div class="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                            <div class="text-[10px] uppercase font-bold text-slate-500 mb-1">Binary Match</div>
+                                            <div class="text-sm font-bold text-slate-700">30.00%</div>
+                                        </div>
+                                        <div class="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                            <div class="text-[10px] uppercase font-bold text-slate-500 mb-1">Direct Sponsor</div>
+                                            <div class="text-sm font-bold text-slate-700">10.00%</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex justify-between items-center px-1 text-xs font-medium text-slate-500 mt-3">
+                                        <span><i class="fa-regular fa-clock mr-1"></i> Validity: 99999 days</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+                                    <a href="updatepck.php?upackage=1" class="flex-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 py-2 text-center text-xs font-bold rounded-lg transition-colors shadow-sm">
+                                        <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                                    </a>
+                                    
+                                    <form action="togglepackage.php" method="post" class="flex-1">
+                                        <input type="hidden" name="pkg_id" value="1">
+                                                                                    <input type="hidden" name="action" value="deactivate">
+                                            <button type="submit" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2 text-center text-xs font-bold rounded-lg transition-colors shadow-sm">
+                                                <i class="fa-solid fa-power-off mr-1"></i> Deactivate
+                                            </button>
+                                                                            </form>
+                                </div>
+                            </div>
+                                            </div>
+                            </div>
+            
+            <!-- Create Package Tab -->
+            <div class="tab-pane" id="create">
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 max-w-4xl mx-auto">
+                    <form action="createpac.php" method="post" class="flex flex-col gap-6">
+                        
+                        <!-- Core Details -->
+                        <div class="mb-2 border-b border-slate-100 pb-2">
+                            <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-info-circle text-indigo-500 mr-1.5"></i> Core Package Info</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Package Name</label>
+                                <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="Enter Package Name" name="pckname" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Plan Validity (Days)</label>
+                                <input type="number" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="e.g. 365" name="renewdays" required min="1">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Package Details</label>
+                            <textarea class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-y" rows="2" placeholder="Intro of package features..." name="pckdetail" required></textarea>
+                        </div>
+                        
+                        <!-- Financials -->
+                        <div class="mt-4 mb-2 border-b border-slate-100 pb-2">
+                            <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-sack-dollar text-emerald-500 mr-1.5"></i> Pricing & Thresholds</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Base Price</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="0.00" name="pckprice" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Tax Amount</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="0.00" name="pcktax" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Currency</label>
+                                <select name="currency" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all h-[42px]" required>
+                                    <option value='USD' class='bg-white'>US Dollar - USD</option><option value='AUD' class='bg-white'>Australian Dollar - AUD</option><option value='BRL' class='bg-white'>Brazilian Real - BRL</option><option value='CAD' class='bg-white'>Canadian Dollar - CAD</option><option value='CZK' class='bg-white'>Czech Koruna - CZK</option><option value='DKK' class='bg-white'>Danish Krone - DKK</option><option value='EUR' class='bg-white'>Euro - EUR</option><option value='THB' class='bg-white'>Thai Baht - THB</option><option value='HKD' class='bg-white'>Hong Kong Dollar - HKD</option><option value='HUF' class='bg-white'>Hungarian Forint - HUF</option><option value='ILS' class='bg-white'>Israeli New Sheqel - ILS</option><option value='JPY' class='bg-white'>Japanese Yen - JPY</option><option value='MYR' class='bg-white'>Malaysian Ringgit - MYR</option><option value='MXN' class='bg-white'>Mexican Peso - MXN</option><option value='NOK' class='bg-white'>Norwegian Krone - NOK</option><option value='NZD' class='bg-white'>New Zealand Dollar - NZD</option><option value='PHP' class='bg-white'>Philippine Peso - PHP</option><option value='PLN' class='bg-white'>Polish Zloty  - PLN</option><option value='GBP' class='bg-white'>Pound Sterling - GBP</option><option value='RUB' class='bg-white'>Russian Ruble - RUB</option><option value='SGD' class='bg-white'>Singapore Dollar - SGD</option><option value='SEK' class='bg-white'>Swedish Krona - SEK</option><option value='CHF' class='bg-white'>Swiss Franc - CHF</option><option value='TWD' class='bg-white'>Taiwan New Dollar - TWD</option><option value='TRY' class='bg-white'>Turkish Lira - TRY</option>                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Min User Payout Limit</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="e.g. 50" name="pckmpay" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Signup Welcome Bonus</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="e.g. 10 (or 0)" name="pcksbonus" required>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 mb-2 border-b border-slate-100 pb-2">
+                            <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-percent text-blue-500 mr-1.5"></i> Binary & Sponsor Percentages</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Binary Match Commission (%)</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="30" name="binary_percent" required value="30">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Direct Sponsor Commission (%)</label>
+                                <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="10" name="sponsor_percent" required value="10">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 mb-2 border-b border-slate-100 pb-2">
+                            <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-shield-halved text-red-500 mr-1.5"></i> Daily Capping Limits</h4>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Daily Binary Capping Status</label>
+                                <select name="capping_status" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all h-[42px]" onchange="document.getElementById('create_capping_limit_container').style.display = this.value == '1' ? 'block' : 'none';">
+                                    <option value="1" class="bg-white">ON — Limit Daily Pairs</option>
+                                    <option value="0" class="bg-white">OFF — Unlimited (Danger!)</option>
+                                </select>
+                            </div>
+                            <div id="create_capping_limit_container">
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Daily Capping Limit (Pairs)</label>
+                                <input type="number" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" placeholder="2" name="capping_limit" required value="2">
+                            </div>
+                        </div>
+
+                        <!-- Matrix Settings -->
+                        <div class="mt-4 mb-2 border-b border-slate-100 pb-2">
+                            <h4 class="text-sm font-bold text-slate-800 m-0"><i class="fa-solid fa-sitemap text-purple-500 mr-1.5"></i> Matrix Levels (1 to 20)</h4>
+                            <p class="text-xs text-slate-500 mt-1 mb-0">Set commission amounts for each upline level. Set to 0 if not used.</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 1</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev1" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 2</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev2" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 3</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev3" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 4</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev4" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 5</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev5" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 6</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev6" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 7</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev7" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 8</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev8" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 9</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev9" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 10</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev10" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 11</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev11" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 12</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev12" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 13</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev13" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 14</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev14" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 15</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev15" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 16</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev16" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 17</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev17" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 18</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev18" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 19</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev19" value="0" required>
+                                </div>
+                                                            <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Level 20</label>
+                                    <input type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="lev20" value="0" required>
+                                </div>
+                                                    </div>
+                        
+                        <div class="border-t border-slate-200 mt-2 pt-4">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white border-none py-3 px-8 text-sm font-bold rounded-xl shadow-md transition-all w-full md:w-auto md:float-right">
+                                <i class="fa-solid fa-check-circle mr-1.5"></i> Create New Package
+                            </button>
+                            <div class="clear-both"></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<style>
+.tab-pane { display: none; }
+.tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.nav-tabs li { cursor: pointer; list-style: none; }
+.nav-tabs li.active a { color: #4f46e5; border-bottom-color: #4f46e5; background: #f8fafc; }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const tabs = document.querySelectorAll(".nav-tabs a");
+    const panes = document.querySelectorAll(".tab-pane");
+
+    tabs.forEach(tab => {
+        tab.addEventListener("click", function(e) {
+            e.preventDefault();
+            tabs.forEach(t => t.parentElement.classList.remove("active"));
+            panes.forEach(p => p.classList.remove("active"));
+
+            this.parentElement.classList.add("active");
+            const targetId = this.getAttribute("href");
+            const targetPane = document.querySelector(targetId);
+            if (targetPane) targetPane.classList.add("active");
+        });
+    });
+});
+</script>
+
+    </main><!-- /content -->
+  </div><!-- /main wrap -->
+</div><!-- /flex wrapper -->
+
+<script src="js/app.v1.js"></script>
+<script src="js/app.plugin.js"></script>
+<script>
+function toggleSidebar() {
+    var s = document.getElementById('dashSidebar');
+    var o = document.getElementById('dashOverlay');
+    s.classList.toggle('-translate-x-full');
+    o.classList.toggle('hidden');
+}
+function closeSidebar() {
+    document.getElementById('dashSidebar').classList.add('-translate-x-full');
+    document.getElementById('dashOverlay').classList.add('hidden');
+}
+</script>
+</body>
+</html>
+
