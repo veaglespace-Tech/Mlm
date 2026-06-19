@@ -256,25 +256,6 @@ CREATE TABLE IF NOT EXISTS `payments` (
 
 -- --------------------------------------------------------
 
--- Table structure for table `paypalpayments`
-
-CREATE TABLE IF NOT EXISTS `paypalpayments` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `orderid` int NOT NULL,
-  `transacid` text NOT NULL,
-  `price` double DEFAULT '0',
-  `currency` text NOT NULL,
-  `date` date NOT NULL,
-  `cod` int NOT NULL DEFAULT '0',
-  `renew` int NOT NULL DEFAULT '0',
-  `renacid` int NOT NULL COMMENT 'Package choosen at renew time, id of package',
-  `pckid` double NOT NULL,
-  `gateway` varchar(25) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- --------------------------------------------------------
-
 -- Table structure for table `payu_payments`
 
 CREATE TABLE IF NOT EXISTS `payu_payments` (
