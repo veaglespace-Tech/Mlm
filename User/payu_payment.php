@@ -155,18 +155,13 @@ if (isset($_SESSION['signup_data']) && !isset($_SESSION['reg_email_sent'])) {
     $_SESSION['reg_email_sent'] = true; // prevent duplicate sending if they refresh
 }
 
-// Fetch PayU Credentials dynamically from database settings
-$settings_row = mlmp_pdo_fetch($pdo, "SELECT paypalid, payzaid, solidtrustid FROM settings LIMIT 1");
+// Fetch PayU Credentials from .env
+$MERCHANT_KEY = $_ENV['PAYU_MERCHANT_KEY'] ?? "GKJE3Z";
+$SALT = $_ENV['PAYU_SALT'] ?? "0zqiCnB4GslxAanSxjEAutWkWuggFiGs";
+$SALT_V2 = $_ENV['PAYU_SALT_V2'] ?? "";
 
-// If settings contain legacy non-PayU values (like a PayPal email or "Payza"), use PayU sandbox credentials.
-$storedKey = trim($settings_row['paypalid'] ?? '');
-$storedSalt = trim($settings_row['payzaid'] ?? '');
-$storedSaltV2 = trim($settings_row['solidtrustid'] ?? '');
-$MERCHANT_KEY = ($storedKey !== '' && strpos($storedKey, '@') === false) ? $storedKey : "GKJE3Z";
-$SALT = ($storedSalt !== '' && strtolower($storedSalt) !== 'payza') ? $storedSalt : "0zqiCnB4GslxAanSxjEAutWkWuggFiGs";
-$SALT_V2 = ($storedSaltV2 !== '' && strlen($storedSaltV2) >= 16 && strtolower($storedSaltV2) !== 'not available') ? $storedSaltV2 : '';
-
-$isSandbox = ($MERCHANT_KEY === "GKJE3Z" && $SALT === "0zqiCnB4GslxAanSxjEAutWkWuggFiGs");
+$payuEnv = strtolower($_ENV['PAYU_ENV'] ?? 'sandbox');
+$isSandbox = ($payuEnv === 'sandbox');
 $PAYU_BASE_URL = $isSandbox ? "https://test.payu.in/_payment" : "https://secure.payu.in/_payment";
 
 $txnid = substr('MLMP' . strtoupper(hash('sha256', $username . random_int(100000, 999999) . microtime(true))), 0, 20);

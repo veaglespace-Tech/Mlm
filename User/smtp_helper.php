@@ -161,9 +161,9 @@ class MLMP_SMTP {
 function mlmp_send_mail($to, $subject, $message) {
     global $pdo;
 
-    // Load active settings from DB
+    // Load active settings from $_ENV, fallback to DB if needed for wlink
     try {
-        $stmt = $pdo->prepare("SELECT wlink, email, smtp_enabled, smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption FROM settings WHERE sno = 0 LIMIT 1");
+        $stmt = $pdo->prepare("SELECT wlink, email FROM settings WHERE sno = 0 LIMIT 1");
         $stmt->execute();
         $settings = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
@@ -171,17 +171,19 @@ function mlmp_send_mail($to, $subject, $message) {
     }
 
     $wlink = $settings['wlink'] ?? 'www.yourwebsite.com';
-    $fromEmail = $settings['email'] ?? "no-reply@$wlink";
+    $fromEmail = $_ENV['SMTP_FROM_EMAIL'] ?? ($settings['email'] ?? "no-reply@$wlink");
     $fromName = "MLM Platform";
 
-    if ($settings && isset($settings['smtp_enabled']) && $settings['smtp_enabled'] == 1) {
+    $smtpEnabled = $_ENV['SMTP_ENABLED'] ?? 0;
+
+    if ($smtpEnabled == 1) {
         // Use custom SMTP
         $smtp = new MLMP_SMTP(
-            $settings['smtp_host'],
-            $settings['smtp_port'],
-            $settings['smtp_username'],
-            $settings['smtp_password'],
-            $settings['smtp_encryption']
+            $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com',
+            $_ENV['SMTP_PORT'] ?? 587,
+            $_ENV['SMTP_USERNAME'] ?? '',
+            $_ENV['SMTP_PASSWORD'] ?? '',
+            $_ENV['SMTP_ENCRYPTION'] ?? 'tls'
         );
         $success = $smtp->send($to, $subject, $message, $fromEmail, $fromName);
         if ($success) {
