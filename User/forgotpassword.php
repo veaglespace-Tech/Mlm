@@ -18,7 +18,7 @@ if ( strlen($email) < 1 ){
 $msg=$msg."Please Enter Your Email Id.<BR>";
 $status= "NOTOK";}
 
-if (!preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/i", $email)){
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 $msg=$msg."Email Id Not Valid, Please Enter The Correct Email Id .<BR>";
 $status= "NOTOK";
 }
