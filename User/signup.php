@@ -23,7 +23,7 @@ $name = $_POST['fname'] ?? $_SESSION['signup_data']['fname'] ?? '';
 $username = $_POST['username'] ?? $_SESSION['signup_data']['username'] ?? '';
 $password = $_POST['password'] ?? '';
 $password2 = $_POST['password2'] ?? '';
-$email = $_POST['email'] ?? $_SESSION['signup_data']['email'] ?? '';
+$email = strtolower(trim($_POST['email'] ?? $_SESSION['signup_data']['email'] ?? ''));
 $mobile = $_POST['mobile'] ?? $_SESSION['signup_data']['mobile'] ?? '';
 $ref = $_POST['referral'] ?? $_SESSION['signup_data']['referedby'] ?? $_GET['aff'] ?? '';
 $address = $_POST['address'] ?? $_SESSION['signup_data']['address'] ?? '';
@@ -86,18 +86,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
         $status = "NOTOK";
     }
 
-    // Layer 1: Basic format check
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $msg .= "Email Id Not Valid, Please Enter The Correct Email Id.<BR>";
+    // --- Email Validation (RFC-compliant + strict format) ---
+    // Rejects: spaces, double dots, short local part, digit-starting domain, >254 chars
+    // Accepts: abhijeetambhore4@gmail.com, user.name@company.co.in
+    $emailInvalid = (
+        empty($email) ||
+        strlen($email) > 254 ||
+        !filter_var($email, FILTER_VALIDATE_EMAIL) ||
+        preg_match('/\.\. /', $email) ||
+        preg_match('/\s/', $email) ||
+        !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{2,}@[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)*\.[a-zA-Z]{2,}$/', $email)
+    );
+    if ($emailInvalid) {
+        $msg .= "Please Enter A Valid Email Address (e.g. name@gmail.com).<BR>";
         $status = "NOTOK";
-    } else {
-        // Layer 2: Strict format - local part min 3 chars, domain must NOT start with digit
-        // Valid:   abhijeetambhore4@gmail.com  | user.name@company.co.in
-        // Invalid: te@jgmail.com (too short)   | tejas@5gmail.com (digit domain)
-        if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{2,}@[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)*\.[a-zA-Z]{2,}$/', $email)) {
-            $msg .= "Email Id Not Valid, Please Enter The Correct Email Id.<BR>";
-            $status = "NOTOK";
-        }
     }
 
     if($password !== $password2){

@@ -7,29 +7,27 @@ include_once("smtp_helper.php");
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['femail']))
 {
 
-$email=$_POST['femail'] ?? '';
+$email = strtolower(trim($_POST['femail'] ?? ''));
 $status=1;
 if($status==1){
 
 $status = "OK";
 $msg="";
 //checking constraints
-if ( strlen($email) < 1 ){
-$msg=$msg."Please Enter Your Email Id.<BR>";
-$status= "NOTOK";}
-
-// Layer 1: Basic format check
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $msg=$msg."Email Id Not Valid, Please Enter The Correct Email Id .<BR>";
+// --- Email Validation (RFC-compliant + strict format) ---
+// Rejects: spaces, double dots, short local part, digit-starting domain, >254 chars
+// Accepts: abhijeetambhore4@gmail.com, user.name@company.co.in
+$emailInvalid = (
+    empty($email) ||
+    strlen($email) > 254 ||
+    !filter_var($email, FILTER_VALIDATE_EMAIL) ||
+    preg_match('/\.\./', $email) ||
+    preg_match('/\s/', $email) ||
+    !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{2,}@[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)*\.[a-zA-Z]{2,}$/', $email)
+);
+if ($emailInvalid) {
+    $msg=$msg."Please Enter A Valid Email Address (e.g. name@gmail.com).<BR>";
     $status= "NOTOK";
-} else {
-    // Layer 2: Strict format - local part min 3 chars, domain must NOT start with digit
-    // Valid:   abhijeetambhore4@gmail.com  | user.name@company.co.in
-    // Invalid: te@jgmail.com (too short)   | tejas@5gmail.com (digit domain)
-    if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{2,}@[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)*\.[a-zA-Z]{2,}$/', $email)) {
-        $msg=$msg."Email Id Not Valid, Please Enter The Correct Email Id .<BR>";
-        $status= "NOTOK";
-    }
 }
 
 
