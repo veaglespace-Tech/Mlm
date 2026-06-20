@@ -469,16 +469,15 @@ function getTreeData($con, $username, $current_depth, $max_depth) {
         'unilevel_children' => []
     ];
     if ($current_depth < $max_depth) {
-        if ($username === $_SESSION['adminidusername']) {
-            // Admin Unilevel Node: Gather children from all pairs (_bc_)
-            $admin_prefix = $_SESSION['adminidusername'] . '_bc_';
-            $pair_query = mysqli_query($con, "SELECT Id FROM affiliateuser WHERE username='$username' OR username LIKE '{$admin_prefix}%' ORDER BY Id ASC");
-            $pair_ids = [];
-            while ($p = mysqli_fetch_assoc($pair_query)) {
-                $pair_ids[] = (int)$p['Id'];
-            }
+        $username_esc = mysqli_real_escape_string($con, $username);
+        $pair_query = mysqli_query($con, "SELECT Id FROM affiliateuser WHERE username='$username_esc' OR username LIKE '{$username_esc}_bc_%' ORDER BY Id ASC");
+        $pair_ids = [];
+        while ($p = mysqli_fetch_assoc($pair_query)) {
+            $pair_ids[] = (int)$p['Id'];
+        }
+        
+        if (count($pair_ids) > 1) {
             $ids_str = implode(',', $pair_ids);
-            
             $children_query = mysqli_query($con, "SELECT username, position FROM affiliateuser WHERE parent_id IN ($ids_str) ORDER BY parent_id ASC, position ASC");
             while ($child = mysqli_fetch_assoc($children_query)) {
                 $child_node = getTreeData($con, $child['username'], $current_depth + 1, $max_depth);

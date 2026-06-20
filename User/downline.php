@@ -408,18 +408,17 @@ function getTreeData($pdo, $username, $current_depth, $max_depth, $session_usern
         'unilevel_children'=> []
     ];
     if ($current_depth < $max_depth) {
-        // If this is the session user's root node, show all _bc_ boards as unilevel children
-        if (!empty($session_username) && $username === $session_username) {
-            $allBoards = mlmp_pdo_fetch_all($pdo, "SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC", [$username, $username . '_bc_%']);
+        // Fetch all boards for this username (main board + virtual boards)
+        $allBoards = mlmp_pdo_fetch_all($pdo, "SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC", [$username, $username . '_bc_%']);
+        
+        if (count($allBoards) > 1) {
             $boardIds = array_map(fn($b) => (int)$b['Id'], $allBoards);
-            if (!empty($boardIds)) {
-                $in_clause = implode(',', $boardIds);
-                $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id IN ($in_clause) ORDER BY parent_id ASC, position ASC");
-                foreach ($children as $child) {
-                    $child_node = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, $session_username);
-                    if ($child_node) {
-                        $node['unilevel_children'][] = $child_node;
-                    }
+            $in_clause = implode(',', $boardIds);
+            $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id IN ($in_clause) ORDER BY parent_id ASC, position ASC");
+            foreach ($children as $child) {
+                $child_node = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, $session_username);
+                if ($child_node) {
+                    $node['unilevel_children'][] = $child_node;
                 }
             }
         } else {
