@@ -86,12 +86,18 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
         $status = "NOTOK";
     }
 
-    if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
-        $msg .= "Email Id Not Valid.<BR>";
+    // Layer 1: Basic format check
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $msg .= "Email Id Not Valid, Please Enter The Correct Email Id.<BR>";
         $status = "NOTOK";
-    } elseif (preg_match('/\.co$/i', $email)) {
-        $msg .= "Emails ending with .co are not permitted to prevent typos.<BR>";
-        $status = "NOTOK";
+    } else {
+        // Layer 2: Strict format - local part min 3 chars, domain must NOT start with digit
+        // Valid:   abhijeetambhore4@gmail.com  | user.name@company.co.in
+        // Invalid: te@jgmail.com (too short)   | tejas@5gmail.com (digit domain)
+        if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{2,}@[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)*\.[a-zA-Z]{2,}$/', $email)) {
+            $msg .= "Email Id Not Valid, Please Enter The Correct Email Id.<BR>";
+            $status = "NOTOK";
+        }
     }
 
     if($password !== $password2){
