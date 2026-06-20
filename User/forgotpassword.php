@@ -14,19 +14,24 @@ if($status==1){
 $status = "OK";
 $msg="";
 //checking constraints
-// --- Email Validation (RFC-compliant + strict format) ---
-// Rejects: spaces, double dots, short local part, digit-starting domain, >254 chars
-// Accepts: abhijeetambhore4@gmail.com, user.name@company.co.in
+// --- Email Validation (RFC-compliant + strict format + whitelisted domains) ---
+// Rejects: spaces, double dots, short local part, digit-starting domain, >254 chars, non-standard domains
+// Accepts: abhijeetambhore4@gmail.com, user@yahoo.com
+$parts = explode('@', $email);
+$domain = end($parts);
+$allowedDomains = ['gmail.com', 'yahoo.com', 'yahoo.co.in', 'hotmail.com', 'outlook.com', 'rediffmail.com', 'icloud.com', 'zoho.com', 'proton.me', 'protonmail.com'];
+
 $emailInvalid = (
     empty($email) ||
     strlen($email) > 254 ||
     !filter_var($email, FILTER_VALIDATE_EMAIL) ||
     preg_match('/\.\./', $email) ||
     preg_match('/\s/', $email) ||
-    !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{2,}@[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)*\.[a-zA-Z]{2,}$/', $email)
+    !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{2,}@[a-zA-Z][a-zA-Z0-9\-]*(\.[a-zA-Z0-9\-]+)*\.[a-zA-Z]{2,}$/', $email) ||
+    !in_array($domain, $allowedDomains)
 );
 if ($emailInvalid) {
-    $msg=$msg."Please Enter A Valid Email Address (e.g. name@gmail.com).<BR>";
+    $msg=$msg."Please Enter A Valid Email Address (e.g. name@gmail.com). Only popular email providers are allowed.<BR>";
     $status= "NOTOK";
 }
 
