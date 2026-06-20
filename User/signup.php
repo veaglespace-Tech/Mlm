@@ -35,7 +35,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
     $status = "OK";
     $msg = "";
 
-    // Validation
+    // --- Input Validation ---
     if(strlen($username) < 6){
         $msg .= "User Id Should Contain Minimum 6 CHARACTERS.<BR>";
         $status = "NOTOK";
