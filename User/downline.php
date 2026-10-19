@@ -313,7 +313,14 @@ function render_member($fname, $username, $email, $doj, $active, $referred_by = 
 // ---- Build levels ----
 $levels = [];
 
-function get_level_members_pdo($pdo, $user, $depth, $level_num) {
+// Cache packages lookup table once to avoid thousands of N+1 database queries
+$all_packages = [];
+$pkg_rows = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages");
+foreach ($pkg_rows as $pr) {
+    $all_packages[(int)$pr['id']] = $pr;
+}
+
+function get_level_members_pdo($pdo, $user, $depth, $level_num, array $all_packages) {
     $results = []; $earnings = 0;
     $stack = [['user'=>$user,'depth'=>0,'ref'=>'']];
     $visited = [];
@@ -324,8 +331,10 @@ function get_level_members_pdo($pdo, $user, $depth, $level_num) {
             $stmt->execute([$item['user']]);
             while ($r = $stmt->fetch()) {
                 $ac = $r['active']; $ll = 0;
-                $rp = mlmp_pdo_fetch($pdo, "SELECT level{$level_num} FROM packages WHERE id=?", [(int)$r['pcktaken']]);
-                if ($rp) $ll = $rp["level{$level_num}"];
+                $pkgId = (int)$r['pcktaken'];
+                if (isset($all_packages[$pkgId]["level{$level_num}"])) {
+                    $ll = (float)$all_packages[$pkgId]["level{$level_num}"];
+                }
                 if ($ac == 1) $earnings += $ll;
                 $results[] = ['fname'=>$r['fname'],'username'=>$r['username'],'email'=>$r['email'],'doj'=>$r['doj'],'active'=>$ac,'ref'=>$item['user']];
             }
@@ -346,7 +355,7 @@ function get_level_members_pdo($pdo, $user, $depth, $level_num) {
 }
 
 for ($i = 1; $i <= 10; $i++) {
-    $levels[$i] = get_level_members_pdo($pdo, $_SESSION['username'], $i, $i);
+    $levels[$i] = get_level_members_pdo($pdo, $_SESSION['username'], $i, $i, $all_packages);
 }
 
 $total_network_earnings = 0;
