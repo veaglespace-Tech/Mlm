@@ -41,7 +41,7 @@ include 'layout_header.php';
             <?php echo nl2br(mlmp_escape($n['body'])); ?>
           </div>
           <div class="text-[11px] text-slate-600 font-medium">
-            Posted by Admin · Msg #<?php echo (int)$n['id']; ?>
+            Posted by Admin &bull; Msg #<?php echo (int)$n['id']; ?>
           </div>
         </div>
       <?php endforeach;

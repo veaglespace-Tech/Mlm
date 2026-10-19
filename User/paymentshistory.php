@@ -61,7 +61,7 @@ $payments = mlmp_pdo_fetch_all($pdo, "SELECT payment_amount, payment_status, cre
           <tr class="hover:bg-slate-50 transition-colors">
             <td class="px-5 py-3.5 text-slate-600 font-medium"><?php echo $i + 1; ?></td>
             <td class="px-5 py-3.5 text-slate-700"><?php echo mlmp_escape($p['createdtime']); ?></td>
-            <td class="px-5 py-3.5 font-semibold text-emerald-600">INR <?php echo mlmp_escape($p['payment_amount']); ?></td>
+            <td class="px-5 py-3.5 font-semibold text-emerald-600">₹ <?php echo mlmp_escape($p['payment_amount']); ?></td>
             <td class="px-5 py-3.5">
               <?php if ($is_done): ?>
                 <span class="text-emerald-600 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-md text-xs border border-emerald-500/20"><i class="fa-solid fa-check-circle mr-1"></i> Completed</span>
@@ -98,13 +98,13 @@ $payments = mlmp_pdo_fetch_all($pdo, "SELECT payment_amount, payment_status, cre
         $end   = min($total_pages, $current_page + $range);
         if ($start > 1): ?>
             <a href="<?php echo $base_url . 1; ?>" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm">1</a>
-            <?php if ($start > 2): ?><span class="px-1 text-slate-400 text-sm">…</span><?php endif;
+            <?php if ($start > 2): ?><span class="px-1 text-slate-400 text-sm">&hellip;</span><?php endif;
         endif;
         for ($p = $start; $p <= $end; $p++): ?>
             <a href="<?php echo $base_url . $p; ?>" class="px-3 py-2 rounded-lg border text-sm font-semibold transition-all shadow-sm <?php echo ($p === $current_page) ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-200' : 'border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700'; ?>"><?php echo $p; ?></a>
         <?php endfor;
         if ($end < $total_pages): ?>
-            <?php if ($end < $total_pages - 1): ?><span class="px-1 text-slate-400 text-sm">…</span><?php endif; ?>
+            <?php if ($end < $total_pages - 1): ?><span class="px-1 text-slate-400 text-sm">&hellip;</span><?php endif; ?>
             <a href="<?php echo $base_url . $total_pages; ?>" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm"><?php echo $total_pages; ?></a>
         <?php endif;
         if ($current_page < $total_pages): ?>

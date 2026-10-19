@@ -56,7 +56,7 @@ if (!empty($pkg_row['pcktaken'])) {
     $pkg = mlmp_pdo_fetch($pdo, "SELECT currency FROM packages WHERE id = ?", [(int)$pkg_row['pcktaken']]);
     $pckcur = $pkg['currency'] ?? '';
 }
-$pckcur = $pckcur ?: 'INR';
+$pckcur = $pckcur ?: '₹';
 
 $page_title = "My Direct Referrals";
 $active_nav = "referrals";
@@ -164,7 +164,7 @@ include_once("layout_header.php");
                 <?php if (!empty($ref['country'])): ?>
                   <span class="text-xs bg-slate-100 px-2 py-0.5 rounded"><?php echo htmlspecialchars($ref['country']); ?></span>
                 <?php else: ?>
-                  <span class="text-slate-400">—</span>
+                  <span class="text-slate-400">â€”</span>
                 <?php endif; ?>
               </td>
               <td class="px-5 py-3">
@@ -174,7 +174,7 @@ include_once("layout_header.php");
                   <span class="text-slate-400 text-xs">No Package</span>
                 <?php endif; ?>
               </td>
-              <td class="px-5 py-3 text-xs text-slate-500"><?php echo !empty($ref['doj']) ? date('d M Y', strtotime($ref['doj'])) : '—'; ?></td>
+              <td class="px-5 py-3 text-xs text-slate-500"><?php echo !empty($ref['doj']) ? date('d M Y', strtotime($ref['doj'])) : 'â€”'; ?></td>
               <td class="px-5 py-3 text-center">
                 <span class="text-xs font-bold text-blue-600">L<?php echo (int)$ref['left_count']; ?></span>
                 <span class="text-slate-300 mx-1">/</span>
@@ -202,7 +202,7 @@ include_once("layout_header.php");
   <!-- Pagination -->
   <div class="px-5 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50">
     <div class="text-xs text-slate-500">
-      Page <?php echo $current_page; ?> of <?php echo $total_pages; ?> — <?php echo $total_refs; ?> total records
+      Page <?php echo $current_page; ?> of <?php echo $total_pages; ?> &mdash; <?php echo $total_refs; ?> total records
     </div>
     <div class="flex gap-1 flex-wrap justify-center">
       <?php
@@ -211,7 +211,7 @@ include_once("layout_header.php");
 
       if ($current_page > 1): ?>
         <a href="?<?php echo $q_base . $q_sep; ?>page=<?php echo $current_page - 1; ?>"
-           class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all">← Prev</a>
+           class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all">&larr; Prev</a>
       <?php endif;
       $range = 2;
       for ($p = 1; $p <= $total_pages; $p++):
@@ -223,12 +223,12 @@ include_once("layout_header.php");
                class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all"><?php echo $p; ?></a>
           <?php endif;
         elseif (abs($p - $current_page) == $range + 1): ?>
-          <span class="px-2 py-1.5 text-xs text-slate-400">…</span>
+          <span class="px-2 py-1.5 text-xs text-slate-400">&hellip;</span>
         <?php endif;
       endfor;
       if ($current_page < $total_pages): ?>
         <a href="?<?php echo $q_base . $q_sep; ?>page=<?php echo $current_page + 1; ?>"
-           class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all">Next →</a>
+           class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all">Next &rarr;</a>
       <?php endif; ?>
     </div>
   </div>

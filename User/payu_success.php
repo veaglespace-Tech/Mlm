@@ -98,7 +98,7 @@ if (!$user) {
             }
 
             if (!$placed) {
-                // All existing boards are full — create a new virtual Pair Board for this user
+                // All existing boards are full -- create a new virtual Pair Board for this user
                 $newBoardNum = $boardCount + 1;
                 $newBoardUsername = $ref . '_bc_' . $newBoardNum;
                 $boardLabel = 'Board ' . $newBoardNum;

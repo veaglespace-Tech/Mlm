@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 include_once ("z_db.php");
 Print "Starting Update... <br>";

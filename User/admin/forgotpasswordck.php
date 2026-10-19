@@ -2,6 +2,7 @@
 //collecting data
 include_once ("z_db.php");
 include_once("../password_helper.php");
+include_once("../smtp_helper.php");
 
 $html_response = "";
 
@@ -42,12 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // dispatching mail
         $to = $email;
         $subject = "Password Request";
-        $headers = "MIME-Version: 1.0" . "\r\n";
-        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-        $headers .= 'From: <no-reply@mlm-platform.local>' . "\r\n";
         
         $message = "As per your request, we have generated a new password.<br> Your new password is <b> $newpassword </b><br><br>Regards";
-        @mail($to, $subject, $message, $headers);
+        mlmp_send_mail($to, $subject, $message);
         
         $html_response = '
         <div class="text-center">

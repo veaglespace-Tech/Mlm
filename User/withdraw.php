@@ -52,9 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_withdraw'])) 
     if (!$has_bank_details) {
         $msg = "<div class='bg-red-500/10 border border-red-500/20 text-red-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-circle-exclamation'></i> Please update your bank details first.</div>";
     } elseif ($req_amount < $min_withdraw) {
-        $msg = "<div class='bg-amber-500/10 border border-amber-500/20 text-amber-500 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-triangle-exclamation'></i> Minimum withdrawal is INR $min_withdraw.</div>";
+        $msg = "<div class='bg-amber-500/10 border border-amber-500/20 text-amber-500 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-triangle-exclamation'></i> Minimum withdrawal is ₹ $min_withdraw.</div>";
     } elseif ($req_amount > $available_balance) {
-        $msg = "<div class='bg-red-500/10 border border-red-500/20 text-red-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-circle-exclamation'></i> Insufficient available balance. You can request up to INR " . number_format($available_balance, 2) . ".</div>";
+        $msg = "<div class='bg-red-500/10 border border-red-500/20 text-red-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-circle-exclamation'></i> Insufficient available balance. You can request up to ₹ " . number_format($available_balance, 2) . ".</div>";
     } else {
         try {
             $itemid = "WREQ-" . time() . "-" . rand(100, 999);
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_withdraw'])) 
 
             $pending_reserved += $req_amount;
             $available_balance = max(0, $current_balance - $pending_reserved);
-            $msg = "<div class='bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-circle-check'></i> Withdrawal request for INR " . number_format($req_amount, 2) . " submitted successfully. It is pending admin approval.</div>";
+            $msg = "<div class='bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-circle-check'></i> Withdrawal request for ₹ " . number_format($req_amount, 2) . " submitted successfully. It is pending admin approval.</div>";
         } catch (Exception $e) {
             $msg = "<div class='bg-red-500/10 border border-red-500/20 text-red-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-triangle-exclamation'></i> System error occurred.</div>";
         }
@@ -95,15 +95,15 @@ $req_offset = ($req_page - 1) * $req_per_page;
             <div class="p-5">
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-center mb-6">
                     <span class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Available Balance</span>
-                    <h2 class="m-0 text-3xl font-bold text-emerald-600">INR <?php echo number_format($available_balance, 2); ?></h2>
+                    <h2 class="m-0 text-3xl font-bold text-emerald-600">₹ <?php echo number_format($available_balance, 2); ?></h2>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
                         <div class="bg-white border border-slate-200 rounded-lg p-2">
                             <span class="block font-semibold">Wallet</span>
-                            INR <?php echo number_format($current_balance, 2); ?>
+                            ₹ <?php echo number_format($current_balance, 2); ?>
                         </div>
                         <div class="bg-white border border-slate-200 rounded-lg p-2">
                             <span class="block font-semibold">Pending</span>
-                            INR <?php echo number_format($pending_reserved, 2); ?>
+                            ₹ <?php echo number_format($pending_reserved, 2); ?>
                         </div>
                     </div>
                 </div>
@@ -118,9 +118,9 @@ $req_offset = ($req_page - 1) * $req_per_page;
                 <?php else: ?>
                     <form action="withdraw.php" method="post">
                         <div class="mb-4">
-                            <label class="block text-sm font-semibold text-slate-700 mb-2">Amount to Withdraw (INR)</label>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Amount to Withdraw (₹)</label>
                             <input type="number" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="amount" min="<?php echo $min_withdraw; ?>" max="<?php echo $available_balance; ?>" step="1" placeholder="Enter amount" required>
-                            <small class="block mt-1.5 text-slate-600 text-xs">Minimum withdrawal limit: <strong class="text-white">INR <?php echo $min_withdraw; ?></strong></small>
+                            <small class="block mt-1.5 text-slate-600 text-xs">Minimum withdrawal limit: <strong class="text-white">₹ <?php echo $min_withdraw; ?></strong></small>
                         </div>
                         
                         <button type="submit" name="request_withdraw" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-lg shadow-indigo-500/30 <?php echo ($available_balance < $min_withdraw) ? 'opacity-50 cursor-not-allowed' : ''; ?>" <?php echo ($available_balance < $min_withdraw) ? 'disabled' : ''; ?>>
@@ -169,7 +169,7 @@ $req_offset = ($req_page - 1) * $req_per_page;
                                 echo "<tr class='hover:bg-slate-50 transition-colors'>
                                     <td class='px-5 py-3 text-slate-500 text-xs'>$row_num</td>
                                     <td class='px-5 py-3 text-slate-600'>$date</td>
-                                    <td class='px-5 py-3 font-semibold text-slate-800'>INR $amt</td>
+                                    <td class='px-5 py-3 font-semibold text-slate-800'>₹ $amt</td>
                                     <td class='px-5 py-3'>$status</td>
                                 </tr>";
                             }

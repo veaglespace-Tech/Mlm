@@ -81,7 +81,7 @@ html, body {
           <div class="text-[10px] text-slate-600 font-semibold tracking-wider uppercase mt-1">Transaction Status</div>
         </div>
         <div class="bg-white/2 p-4 rounded-xl border border-slate-200 backdrop-blur-sm">
-          <div class="text-white text-lg font-extrabold">INR 1,000</div>
+          <div class="text-white text-lg font-extrabold">₹ 1,000</div>
           <div class="text-[10px] text-slate-600 font-semibold tracking-wider uppercase mt-1">Plan Price</div>
         </div>
         <div class="bg-white/2 p-4 rounded-xl border border-slate-200 backdrop-blur-sm">

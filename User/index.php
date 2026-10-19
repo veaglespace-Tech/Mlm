@@ -305,7 +305,7 @@ function googleTranslateElementInit() {
           <div class="text-[10px] text-muted-custom font-bold tracking-wider uppercase mt-1">Matrix Plan</div>
         </div>
         <div class="custom-card p-4 rounded-xl hover:scale-[1.03] transform transition duration-300">
-          <div class="text-emerald-500 text-xl font-extrabold">INR Payouts</div>
+          <div class="text-emerald-500 text-xl font-extrabold">₹ Payouts</div>
           <div class="text-[10px] text-muted-custom font-bold tracking-wider uppercase mt-1">Automated</div>
         </div>
         <div class="custom-card p-4 rounded-xl hover:scale-[1.03] transform transition duration-300">

@@ -315,7 +315,7 @@ $_layout_brand = 'MLM';
             <?php else: ?>
                 <div style="text-align:center; margin-bottom:24px;">
                     <div style="color:var(--text-muted); font-size:13px; margin-bottom:8px;">Amount Payable</div>
-                    <div style="color:var(--accent-green); font-size:32px; font-weight:800;">INR <?php echo number_format((float)$amount, 2); ?></div>
+                    <div style="color:var(--accent-green); font-size:32px; font-weight:800;">₹ <?php echo number_format((float)$amount, 2); ?></div>
                 </div>
 
                 <div style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding: 0 16px; margin-bottom:24px;">

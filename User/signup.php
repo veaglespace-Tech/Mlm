@@ -339,7 +339,7 @@ html, body {
         <div class="custom-card p-3.5 rounded-xl flex items-center gap-3 hover:scale-[1.03] transform transition duration-300">
           <div class="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center text-indigo-600 text-sm"><i class="fa-solid fa-cube"></i></div>
           <div>
-            <div class="text-primary-custom text-sm font-semibold">INR 1,000 Starter</div>
+            <div class="text-primary-custom text-sm font-semibold">₹ 1,000 Starter</div>
             <div class="text-[10px] text-muted-custom font-bold uppercase tracking-wider">Premium Entrance Tier</div>
           </div>
         </div>

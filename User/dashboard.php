@@ -227,7 +227,7 @@ if ($acti != 1) {
     <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-cyan-500 to-teal-400"></div>
     <div class="w-11 h-11 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-arrows-left-right"></i></div>
     <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Pair Commission</div>
-    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur ?: 'INR') . ' ' . number_format($pair_commission, 2); ?></div>
+    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur ?: '₹') . ' ' . number_format($pair_commission, 2); ?></div>
     <div class="text-xs text-cyan-600 font-medium">Binary pair earnings (after TDS)</div>
   </div>
   <!-- Card 3: Direct Referral Bonus -->
@@ -235,7 +235,7 @@ if ($acti != 1) {
     <div class="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 to-emerald-400"></div>
     <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-hand-holding-dollar"></i></div>
     <div class="text-[11.5px] text-slate-600 font-semibold uppercase tracking-[0.8px] mt-1">Direct Referral Bonus</div>
-    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur ?: 'INR') . ' ' . number_format($direct_bonus, 2); ?></div>
+    <div class="text-[26px] font-extrabold text-slate-900 leading-none"><?php echo mlmp_escape($pcur ?: '₹') . ' ' . number_format($direct_bonus, 2); ?></div>
     <div class="text-xs text-emerald-600 font-medium"><?php echo mlmp_escape($numrows); ?> direct referral(s)</div>
   </div>
   <!-- Card 4: Payout Progress -->
@@ -265,7 +265,7 @@ if ($acti != 1) {
       <div>
         <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.8px] mb-0.5">Today's Earnings</div>
         <div class="text-[22px] font-extrabold text-slate-900 leading-tight">
-          <?php echo htmlspecialchars($pcur ?: 'INR', ENT_QUOTES, 'UTF-8') . ' ' . number_format($daily_pair, 2); ?>
+          <?php echo htmlspecialchars($pcur ?: '₹', ENT_QUOTES, 'UTF-8') . ' ' . number_format($daily_pair, 2); ?>
         </div>
         <div class="text-[11px] text-blue-600 font-semibold mt-0.5">Pair commission (after TDS)</div>
       </div>
@@ -279,7 +279,7 @@ if ($acti != 1) {
       <div>
         <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.8px] mb-0.5">This Week (7 Days)</div>
         <div class="text-[22px] font-extrabold text-slate-900 leading-tight">
-          <?php echo htmlspecialchars($pcur ?: 'INR', ENT_QUOTES, 'UTF-8') . ' ' . number_format($weekly_pair, 2); ?>
+          <?php echo htmlspecialchars($pcur ?: '₹', ENT_QUOTES, 'UTF-8') . ' ' . number_format($weekly_pair, 2); ?>
         </div>
         <div class="text-[11px] text-violet-600 font-semibold mt-0.5">Pair commission (after TDS)</div>
       </div>
@@ -293,7 +293,7 @@ if ($acti != 1) {
       <div>
         <div class="text-[11px] text-slate-500 font-semibold uppercase tracking-[0.8px] mb-0.5">This Month</div>
         <div class="text-[22px] font-extrabold text-slate-900 leading-tight">
-          <?php echo htmlspecialchars($pcur ?: 'INR', ENT_QUOTES, 'UTF-8') . ' ' . number_format($monthly_pair, 2); ?>
+          <?php echo htmlspecialchars($pcur ?: '₹', ENT_QUOTES, 'UTF-8') . ' ' . number_format($monthly_pair, 2); ?>
         </div>
         <div class="text-[11px] text-emerald-600 font-semibold mt-0.5">Pair commission (after TDS)</div>
       </div>
@@ -477,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var labels       = <?php echo json_encode($chart_labels); ?>;
     var signupData   = <?php echo json_encode($chart_signups); ?>;
     var earningsData = <?php echo json_encode($chart_earnings); ?>;
-    var currency     = <?php echo json_encode($pcur ?: 'INR'); ?>;
+    var currency     = <?php echo json_encode($pcur ?: '₹'); ?>;
 
     var signupGradient = ctx.createLinearGradient(0, 0, 0, 280);
     signupGradient.addColorStop(0, 'rgba(96,165,250,0.5)');
