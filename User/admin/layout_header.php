@@ -13,8 +13,10 @@ $_layout_admin = mlmp_pdo_fetch($pdo, "SELECT fname, country FROM affiliateuser 
 $_layout_fname    = $_layout_admin['fname'] ?? 'Administrator';
 $_layout_country  = $_layout_admin['country'] ?? '';
 
-$_layout_settings = mlmp_pdo_fetch($pdo, "SELECT header FROM settings WHERE sno = 0 LIMIT 1");
-$_layout_brand    = $_layout_settings['header'] ?? 'MLM Platform';
+$_layout_settings = mlmp_pdo_fetch($pdo, "SELECT header, coname FROM settings WHERE sno = 0 LIMIT 1");
+$_layout_brand    = (!empty($_layout_settings['coname']) && $_layout_settings['coname'] !== 'Header') 
+    ? $_layout_settings['coname'] 
+    : ((!empty($_layout_settings['header']) && $_layout_settings['header'] !== 'Header') ? $_layout_settings['header'] : 'Veagle Space');
 
 $page_title  = $page_title  ?? 'Admin Dashboard';
 $active_nav  = $active_nav  ?? 'dashboard';
@@ -159,7 +161,7 @@ if (!function_exists('nav_active')) {
   </aside><!-- /sidebar -->
 
   <!-- ======== MAIN ======== -->
-  <div class="flex-1 flex flex-col lg:ml-[260px] min-h-screen bg-slate-50 transition-all duration-300 w-full relative">
+  <div class="flex-1 flex flex-col lg:ml-[260px] min-h-screen bg-slate-50 transition-all duration-300 w-full lg:w-[calc(100%-260px)] min-w-0 relative">
 
     <!-- Topbar -->
     <header class="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 sm:px-7 sticky top-0 z-30">
@@ -181,4 +183,4 @@ if (!function_exists('nav_active')) {
     </header>
 
     <!-- Page Content starts here -->
-    <main class="flex-1 p-4 sm:p-7 overflow-x-hidden">
+    <main class="flex-1 p-4 sm:p-7 min-w-0">

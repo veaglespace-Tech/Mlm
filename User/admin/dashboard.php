@@ -94,6 +94,15 @@ $system_tds_row = mlmp_pdo_fetch($pdo, "SELECT SUM(tds_amount) as total_tds FROM
 $system_tds = (float)($system_tds_row['total_tds'] ?? 0);
 $total_admin_collection = $admin_commission + $system_tds;
 
+// Withdrawal & Payout Metrics
+$pending_payouts_row = mlmp_pdo_fetch($pdo, "SELECT COUNT(*) as count, COALESCE(SUM(payment_amount), 0) as total FROM payments WHERE payment_status = 0");
+$pending_payouts_count = (int)($pending_payouts_row['count'] ?? 0);
+$pending_payouts_total = (float)($pending_payouts_row['total'] ?? 0);
+
+$completed_payouts_row = mlmp_pdo_fetch($pdo, "SELECT COUNT(*) as count, COALESCE(SUM(payment_amount), 0) as total FROM payments WHERE payment_status = 1");
+$completed_payouts_count = (int)($completed_payouts_row['count'] ?? 0);
+$completed_payouts_total = (float)($completed_payouts_row['total'] ?? 0);
+
 $page_title = 'Admin Dashboard';
 $active_nav = 'dashboard';
 $extra_head = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
@@ -103,6 +112,26 @@ include("layout_header.php");
 <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 text-indigo-700 text-sm">
     <p>Welcome back, <strong class="text-indigo-900"><?php echo mlmp_escape($admin_name); ?></strong>! Here is your real-time platform activity and system metrics overview.</p>
 </div>
+
+<?php if ($pending_payouts_count > 0): ?>
+<div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm relative overflow-hidden">
+    <div class="flex items-center gap-3.5 relative z-10">
+        <div class="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shrink-0 shadow-md shadow-amber-500/30 animate-pulse">
+            <i class="fa-solid fa-bell"></i>
+        </div>
+        <div>
+            <div class="flex items-center gap-2">
+                <h4 class="font-bold text-amber-950 text-sm sm:text-base mb-0">Pending Withdrawal Requests</h4>
+                <span class="bg-amber-500 text-white text-[11px] font-extrabold px-2 py-0.5 rounded-full"><?php echo $pending_payouts_count; ?> Pending</span>
+            </div>
+            <p class="text-xs text-amber-900/90 mt-0.5 mb-0">Members have requested payouts totaling <strong>INR <?php echo number_format($pending_payouts_total, 2); ?></strong> awaiting disbursement and verification.</p>
+        </div>
+    </div>
+    <a href="payrequest.php?status=pending" class="shrink-0 inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm shadow-amber-600/20">
+        Review & Process <i class="fa-solid fa-arrow-right text-[11px]"></i>
+    </a>
+</div>
+<?php endif; ?>
 
 <!-- Personal Stats Row -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-8">
@@ -145,30 +174,42 @@ include("layout_header.php");
 <h4 class="text-lg font-bold text-slate-900 mb-4 tracking-tight">System Overview</h4>
 
 <!-- Statistics Row -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
   <!-- Stat Card 1 -->
   <div class="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 hover:border-indigo-300 transition-all duration-300">
     <div class="text-2xl font-extrabold text-indigo-600 mb-1"><?php echo mlmp_escape($total_users); ?></div>
     <div class="text-[11px] text-slate-600 font-semibold uppercase tracking-wider">Total Members</div>
   </div>
-  
-  <!-- Stat Card 2 -->
-  <div class="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 hover:border-emerald-300 transition-all duration-300">
-    <div class="text-2xl font-extrabold text-emerald-600 mb-1">INR <?php echo mlmp_escape(number_format((float)$total_payments, 2)); ?></div>
-    <div class="text-[11px] text-slate-600 font-semibold uppercase tracking-wider">Total Payments</div>
-  </div>
 
-  <!-- Stat Card 3 -->
+  <!-- Stat Card 2 -->
   <div class="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 hover:border-cyan-300 transition-all duration-300">
     <div class="text-2xl font-extrabold text-cyan-600 mb-1"><?php echo mlmp_escape($active_members_count); ?></div>
     <div class="text-[11px] text-slate-600 font-semibold uppercase tracking-wider">Active Members</div>
   </div>
 
-  <!-- Stat Card 4 -->
-  <div class="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 hover:border-amber-300 transition-all duration-300">
-    <div class="text-2xl font-extrabold text-amber-600 mb-1"><?php echo mlmp_escape($inactive_members_count); ?></div>
+  <!-- Stat Card 3 -->
+  <div class="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 hover:border-slate-300 transition-all duration-300">
+    <div class="text-2xl font-extrabold text-slate-600 mb-1"><?php echo mlmp_escape($inactive_members_count); ?></div>
     <div class="text-[11px] text-slate-600 font-semibold uppercase tracking-wider">Inactive Members</div>
   </div>
+
+  <!-- Stat Card 4 -->
+  <div class="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 hover:border-emerald-300 transition-all duration-300">
+    <div class="text-2xl font-extrabold text-emerald-600 mb-1">INR <?php echo mlmp_escape(number_format((float)$total_payments, 2)); ?></div>
+    <div class="text-[11px] text-slate-600 font-semibold uppercase tracking-wider">Total Payments</div>
+  </div>
+
+  <!-- Stat Card 5: Pending Payouts -->
+  <a href="payrequest.php?status=pending" class="block bg-white border border-amber-200 hover:border-amber-400 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 transition-all duration-300 group">
+    <div class="text-2xl font-extrabold text-amber-600 mb-1">INR <?php echo mlmp_escape(number_format($pending_payouts_total, 2)); ?></div>
+    <div class="text-[11px] text-amber-800 font-semibold uppercase tracking-wider">Pending Payouts (<?php echo $pending_payouts_count; ?>)</div>
+  </a>
+
+  <!-- Stat Card 6: Settled Payouts -->
+  <a href="payrequest.php?status=completed" class="block bg-white border border-slate-200 hover:border-emerald-300 rounded-xl p-5 text-center shadow-sm hover:-translate-y-1 transition-all duration-300 group">
+    <div class="text-2xl font-extrabold text-emerald-600 mb-1">INR <?php echo mlmp_escape(number_format($completed_payouts_total, 2)); ?></div>
+    <div class="text-[11px] text-slate-600 font-semibold uppercase tracking-wider">Settled Payouts (<?php echo $completed_payouts_count; ?>)</div>
+  </a>
 </div>
 
 <!-- Visual Analytics Row 1 -->

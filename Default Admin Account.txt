@@ -1,6 +1,11 @@
-username - adminadmin
-password - 123123123
+=========================================
+Veagle Space MLM - Admin Credentials
+=========================================
+Name:     abhijeet ambhore
+Email:    abhijeetambhore4@gmail.com
+Username: adminadmin
+Password: Veagle@123
 
-Note - To change the username you need to edit it in MYSQL using phpmyadmin and to change the password just login into admin account and change your password from profile.
-
-**Last Updated - 4th February**
+Login URL: http://127.0.0.1:8000/User/admin/
+Note: You can log in using either your Email (abhijeetambhore4@gmail.com) or Username (adminadmin) with Password (Veagle@123).
+=========================================

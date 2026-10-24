@@ -46,14 +46,14 @@ body { font-family: 'Inter', sans-serif; }
       <form action="loginproc.php" method="post" class="flex flex-col gap-3.5">
         <div class="relative">
             <i class="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-[#748da1]"></i>
-            <input type="text" name="username" placeholder="Email / Username" minlength="6" required 
+            <input type="text" name="username" placeholder="Email / Username" minlength="3" required 
                 class="w-full h-11 border border-[#79a3c1]/40 bg-[#eef5fb] rounded-xl px-11 text-sm outline-none text-[#0d1b2a] transition-all focus:bg-[#e6f1fa] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15">
         </div>
 
         <div class="relative">
             <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-[#748da1]"></i>
             <i class="fa-regular fa-eye-slash absolute right-3.5 top-1/2 -translate-y-1/2 text-[#748da1] cursor-pointer" id="togglePassword"></i>
-            <input type="password" name="password" id="password" placeholder="Password" minlength="8" required
+            <input type="password" name="password" id="password" placeholder="Password" minlength="6" required
                 class="w-full h-11 border border-[#79a3c1]/40 bg-[#eef5fb] rounded-xl px-11 text-sm outline-none text-[#0d1b2a] transition-all focus:bg-[#e6f1fa] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15">
         </div>
 

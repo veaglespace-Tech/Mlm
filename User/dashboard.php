@@ -171,20 +171,36 @@ if ($acti != 1) {
         $db_now_row = mlmp_pdo_fetch($pdo, "SELECT NOW() as db_now");
         $now = strtotime($db_now_row['db_now']);
         $first_joined = strtotime($pending_pair['first_member_joined_at']);
-        $hours_left = 24 - (($now - $first_joined) / 3600);
+        $seconds_left = max(0, 86400 - ($now - $first_joined));
+        $percent_left = round(($seconds_left / 86400) * 100);
         
-        if ($hours_left > 0) {
+        if ($seconds_left > 0) {
             // Countdown is active
-            $hrs = floor($hours_left);
-            $mins = floor(($hours_left - $hrs) * 60);
-            echo '<div class="bg-amber-50 border border-amber-300 rounded-xl p-4 md:p-5 mb-7 flex items-center gap-4 shadow-sm relative overflow-hidden">
-                    <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-amber-100 to-transparent pointer-events-none"></div>
-                    <div class="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-amber-500/30 animate-pulse"><i class="fa-solid fa-stopwatch"></i></div>
-                    <div class="relative z-10">
-                        <h4 class="font-bold text-amber-900 text-[15px] mb-1">Active Countdown: Pair #' . htmlspecialchars($pending_pair['pair_no']) . '</h4>
-                        <p class="text-sm text-amber-800 mb-0">A member joined one side of this pair. You must place a member on the other leg within <b>24 hours</b> to qualify for this commission!</p>
-                        <div class="mt-2 inline-flex items-center gap-2 bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-200">
-                            <i class="fa-regular fa-clock"></i> Time Remaining: '.$hrs.' hours, '.$mins.' minutes
+            $hrs = floor($seconds_left / 3600);
+            $mins = floor(($seconds_left % 3600) / 60);
+            $secs = $seconds_left % 60;
+            echo '<div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-5 md:p-6 mb-7 shadow-sm relative overflow-hidden">
+                    <div class="absolute right-0 top-0 bottom-0 w-48 bg-gradient-to-l from-amber-100/50 to-transparent pointer-events-none"></div>
+                    <div class="flex items-start md:items-center gap-4 relative z-10">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl shrink-0 shadow-lg shadow-amber-500/30 animate-pulse"><i class="fa-solid fa-stopwatch"></i></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h4 class="font-extrabold text-amber-950 text-base md:text-lg mb-0">Active 24-Hour Timer: Pair #' . htmlspecialchars($pending_pair['pair_no']) . '</h4>
+                                <span class="bg-amber-500/20 text-amber-900 border border-amber-500/30 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Commission Window</span>
+                            </div>
+                            <p class="text-sm text-amber-900/90 mt-1 mb-3">One member joined your team for this pair. Place a member on your matching leg within <b>24 hours</b> to unlock your <b>₹300.00</b> Pair Matching Bonus!</p>
+                            
+                            <!-- Live Progress Bar -->
+                            <div class="w-full bg-amber-200/70 h-2.5 rounded-full overflow-hidden mb-3 max-w-xl">
+                                <div id="livePairProgress" class="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-1000" style="width: ' . $percent_left . '%;"></div>
+                            </div>
+
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <div class="inline-flex items-center gap-2 bg-white text-amber-950 px-3.5 py-1.5 rounded-xl text-xs font-black border border-amber-300 shadow-sm">
+                                    <i class="fa-regular fa-clock text-amber-600"></i> Time Left: <span id="livePairTimer" data-seconds="' . $seconds_left . '">' . sprintf('%02d:%02d:%02d', $hrs, $mins, $secs) . '</span>
+                                </div>
+                                <span class="text-xs font-semibold text-amber-800"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i> Pair Payout: <strong>₹300.00</strong></span>
+                            </div>
                         </div>
                     </div>
                   </div>';
@@ -557,6 +573,36 @@ function copyRefUrl() {
     suc.style.display = 'block';
     setTimeout(function(){ suc.style.display = 'none'; }, 2500);
 }
+
+// Live 24-hr Countdown Ticker
+(function() {
+    var timerEl = document.getElementById('livePairTimer');
+    var progressEl = document.getElementById('livePairProgress');
+    if (!timerEl) return;
+
+    var secLeft = parseInt(timerEl.getAttribute('data-seconds'), 10);
+    if (isNaN(secLeft) || secLeft <= 0) return;
+
+    var timerInterval = setInterval(function() {
+        secLeft--;
+        if (secLeft <= 0) {
+            clearInterval(timerInterval);
+            timerEl.innerText = "00:00:00 (Expired)";
+            if (progressEl) progressEl.style.width = "0%";
+            return;
+        }
+
+        var h = Math.floor(secLeft / 3600);
+        var m = Math.floor((secLeft % 3600) / 60);
+        var s = secLeft % 60;
+        timerEl.innerText = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+
+        if (progressEl) {
+            var pct = Math.max(0, Math.min(100, (secLeft / 86400) * 100));
+            progressEl.style.width = pct + '%';
+        }
+    }, 1000);
+})();
 </script>
 
 <?php

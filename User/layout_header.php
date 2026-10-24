@@ -139,7 +139,7 @@ function nav_active($key, $active_nav) {
   </aside><!-- /sidebar -->
 
   <!-- ======== MAIN ======== -->
-  <div class="flex-1 flex flex-col lg:ml-[260px] min-h-screen bg-slate-50 transition-all duration-300 w-full relative">
+  <div class="flex-1 flex flex-col lg:ml-[260px] min-h-screen bg-slate-50 transition-all duration-300 w-full lg:w-[calc(100%-260px)] min-w-0 relative">
 
     <!-- Topbar -->
     <header class="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 sm:px-7 sticky top-0 z-30">
@@ -162,4 +162,4 @@ function nav_active($key, $active_nav) {
     </header>
 
     <!-- Page Content starts here - each page includes its content after this -->
-    <main class="flex-1 p-4 sm:p-7 overflow-x-hidden">
+    <main class="flex-1 p-4 sm:p-7 min-w-0">

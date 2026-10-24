@@ -304,13 +304,10 @@ function process_pair_payout(PDO $pdo, int $userId, float $commissionPerPair, fl
                 $tds = round($gross * $tdsRate, 2);
                 $net = $gross - $tds;
 
-                mlmp_pdo_execute($pdo, "UPDATE affiliateuser SET tamount = tamount + ? WHERE Id = ?", [$net, $userId]);
+                mlmp_pdo_execute($pdo, "UPDATE affiliateuser SET tamount = tamount + ?, paid_pairs = paid_pairs + 1 WHERE Id = ?", [$net, $userId]);
                 mlmp_pdo_execute($pdo, "INSERT INTO pairing_transactions (user_id, gross_amount, tds_amount, net_amount, pairs_count, created_at) VALUES (?, ?, ?, ?, 1, NOW())", [$userId, $gross, $tds, $net]);
             }
         }
-
-        // Increment paid_pairs on affiliateuser
-        mlmp_pdo_execute($pdo, "UPDATE affiliateuser SET paid_pairs = ? WHERE Id = ?", [$p, $userId]);
     }
 }
 
