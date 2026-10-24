@@ -139,3 +139,21 @@ function ensure_settings_referral_schema(PDO $pdo): void {
         }
     }
 }
+
+function ensure_username_length_schema(PDO $pdo): void {
+    try {
+        $pdo->exec("ALTER TABLE affiliateuser MODIFY username VARCHAR(50) NOT NULL");
+        $pdo->exec("ALTER TABLE affiliateuser MODIFY referedby VARCHAR(50) NOT NULL DEFAULT 'none'");
+    } catch (Exception $e) {}
+
+    try {
+        $pdo->exec("ALTER TABLE pending_registrations MODIFY username VARCHAR(50) NOT NULL");
+        $pdo->exec("ALTER TABLE pending_registrations MODIFY referedby VARCHAR(50) NOT NULL");
+    } catch (Exception $e) {}
+
+    try {
+        $pdo->exec("ALTER TABLE rejected_registrations MODIFY username VARCHAR(50) NOT NULL");
+        $pdo->exec("ALTER TABLE rejected_registrations MODIFY referedby VARCHAR(50) NOT NULL");
+    } catch (Exception $e) {}
+}
+

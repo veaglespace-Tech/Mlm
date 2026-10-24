@@ -2,7 +2,8 @@
 include_once("z_db.php");
 session_start();
 if (!isset($_SESSION['adminidusername'])) {
-    echo "<script>window.location='index.php';</script>"; exit;
+    header("Location: index.php");
+    exit;
 }
 
 // Fetch user's package & currency info

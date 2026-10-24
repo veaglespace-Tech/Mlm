@@ -4,12 +4,8 @@ include_once ("z_db.php");
 session_start();
 // Check, if username session is NOT set then this page will jump to login page
 if (!isset($_SESSION['adminidusername'])) {
-        print "
-				<script language='javascript'>
-					window.location = 'index.php';
-				</script>
-			";
-        exit;
+    header("Location: index.php");
+    exit;
 }
 
 // Fetch admin user data safely using prepared statement

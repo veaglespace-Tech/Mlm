@@ -36,13 +36,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
     $msg = "";
 
     // --- Input Validation ---
-    if(strlen($username) < 6){
-        $msg .= "User Id Should Contain Minimum 6 CHARACTERS.<BR>";
+    if(strlen($username) < 3 || strlen($username) > 30){
+        $msg .= "User Id Should Contain Between 3 and 30 Characters.<BR>";
         $status = "NOTOK";
     }
 
-    if(!ctype_alnum($username)){
-        $msg .= "User Id Should Contain Alphanumeric Chars Only.<BR>";
+    if(!preg_match('/^[a-zA-Z0-9_]+$/', $username)){
+        $msg .= "User Id Should Contain Alphanumeric Chars and Underscores Only.<BR>";
         $status = "NOTOK";
     }
 

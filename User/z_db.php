@@ -248,6 +248,25 @@ function ensure_settings_referral_schema(PDO $pdo): void {
     }
 }
 
+function ensure_username_length_schema(PDO $pdo): void {
+    try {
+        $pdo->exec("ALTER TABLE affiliateuser MODIFY username VARCHAR(50) NOT NULL");
+        $pdo->exec("ALTER TABLE affiliateuser MODIFY referedby VARCHAR(50) NOT NULL DEFAULT 'none'");
+    } catch (Exception $e) {}
+
+    try {
+        $pdo->exec("ALTER TABLE pending_registrations MODIFY username VARCHAR(50) NOT NULL");
+        $pdo->exec("ALTER TABLE pending_registrations MODIFY referedby VARCHAR(50) NOT NULL");
+    } catch (Exception $e) {}
+
+    try {
+        $pdo->exec("ALTER TABLE rejected_registrations MODIFY username VARCHAR(50) NOT NULL");
+        $pdo->exec("ALTER TABLE rejected_registrations MODIFY referedby VARCHAR(50) NOT NULL");
+    } catch (Exception $e) {}
+}
+ensure_username_length_schema($pdo);
+
+if (!function_exists('process_pair_payout')) {
 function process_pair_payout(PDO $pdo, int $userId, float $commissionPerPair, float $tdsRate, int $dailyLimit): void {
     $user = mlmp_pdo_fetch($pdo, "SELECT left_count, right_count, paid_pairs, level FROM affiliateuser WHERE Id = ? LIMIT 1", [$userId]);
     if (!$user) {
@@ -309,6 +328,7 @@ function process_pair_payout(PDO $pdo, int $userId, float $commissionPerPair, fl
             }
         }
     }
+}
 }
 
 function mlmp_launch_profile(PDO $pdo, string $username): bool {
@@ -414,6 +434,32 @@ function mlmp_launch_profile(PDO $pdo, string $username): bool {
         if ($ownTransaction) {
             $pdo->commit();
         }
+
+        // Send email alert to sponsor about new downline member & pair qualification
+        try {
+            require_once __DIR__ . '/smtp_helper.php';
+            $sponsorUser = mlmp_pdo_fetch($pdo, "SELECT fname, email FROM affiliateuser WHERE username = ? LIMIT 1", [$user['referedby']]);
+            if ($sponsorUser && !empty($sponsorUser['email'])) {
+                $subj = "New Member Joined Your Team! - @" . $username;
+                $msgBody = "
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;'>
+                    <h2 style='color: #4f46e5; margin-top: 0;'>New Team Member Activated!</h2>
+                    <p>Hello <strong>" . htmlspecialchars($sponsorUser['fname']) . "</strong>,</p>
+                    <p>Great news! A new member has joined your affiliate downline under your sponsorship.</p>
+                    <div style='background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #e2e8f0;'>
+                        <p style='margin: 4px 0;'><strong>New Member:</strong> @" . htmlspecialchars($username) . "</p>
+                        <p style='margin: 4px 0;'><strong>Placed Leg:</strong> " . ($user['position'] === 'L' ? 'Left Team' : 'Right Team') . "</p>
+                        <p style='margin: 4px 0;'><strong>Sponsorship Bonus:</strong> INR " . number_format($referrerBonus, 2) . " credited to your wallet</p>
+                    </div>
+                    <p><em>Reminder: Ensure your matching leg has active volume within 24 hours to maximize your Binary Pair Matching commissions!</em></p>
+                    <p style='color: #64748b; font-size: 12px; margin-top: 20px;'>Veagle Space MLM Platform</p>
+                </div>";
+                mlmp_send_mail($sponsorUser['email'], $subj, $msgBody);
+            }
+        } catch (Exception $mailErr) {
+            error_log("Failed to send sponsor join alert: " . $mailErr->getMessage());
+        }
+
         return true;
     } catch (Exception $e) {
         if (isset($ownTransaction) && $ownTransaction && $pdo->inTransaction()) {

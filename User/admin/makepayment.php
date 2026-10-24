@@ -4,7 +4,7 @@ include_once("z_db.php");
 session_start();
 
 if (!isset($_SESSION['adminidusername'])) {
-    print "<script language='javascript'>window.location = 'index.php';</script>";
+    header("Location: index.php");
     exit;
 }
 
@@ -44,7 +44,35 @@ try {
     );
 
     $pdo->commit();
-    print "<center>Status Updated and Wallet Deducted<br/>Redirecting in 2 seconds...</center>";
+
+    // Send automated Payout Settlement Email Notification
+    try {
+        require_once __DIR__ . '/../smtp_helper.php';
+        $userRow = mlmp_pdo_fetch($pdo, "SELECT fname, email, bankname, accountno FROM affiliateuser WHERE Id = ?", [$userId]);
+        if ($userRow && !empty($userRow['email'])) {
+            $subject = "Withdrawal Payout Disbursed - INR " . number_format($amount, 2);
+            $body = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;'>
+                <h2 style='color: #4f46e5; margin-top: 0;'>Payout Disbursed Successfully!</h2>
+                <p>Dear <strong>" . htmlspecialchars($userRow['fname']) . "</strong>,</p>
+                <p>Your withdrawal request for <strong>INR " . number_format($amount, 2) . "</strong> has been processed and disbursed to your registered bank account.</p>
+                <div style='background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;'>
+                    <p style='margin: 4px 0;'><strong>Payout Request ID:</strong> #" . $tomake . "</p>
+                    <p style='margin: 4px 0;'><strong>Disbursed Amount:</strong> INR " . number_format($amount, 2) . "</p>
+                    <p style='margin: 4px 0;'><strong>Bank Name:</strong> " . htmlspecialchars($userRow['bankname']) . "</p>
+                    <p style='margin: 4px 0;'><strong>Account Number:</strong> " . htmlspecialchars($userRow['accountno']) . "</p>
+                    <p style='margin: 4px 0;'><strong>Status:</strong> <span style='color: #16a34a; font-weight: bold;'>Completed / Paid</span></p>
+                </div>
+                <p>Thank you for your active participation in our affiliate network!</p>
+                <p style='color: #64748b; font-size: 12px; margin-top: 20px;'>Veagle Space Finance & Support Team</p>
+            </div>";
+            mlmp_send_mail($userRow['email'], $subject, $body);
+        }
+    } catch (Exception $mailEx) {
+        error_log("Failed to send payout notification email: " . $mailEx->getMessage());
+    }
+
+    print "<center>Status Updated, Wallet Deducted and Member Notified<br/>Redirecting in 2 seconds...</center>";
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();

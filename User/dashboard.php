@@ -4,16 +4,20 @@ include_once ("z_db.php");
 session_start();
 // Check, if username session is NOT set then this page will jump to login page
 if (!isset($_SESSION['username'])) {
-        print "
-                        <script language='javascript'>
-                                window.location = 'index.php';
-                        </script>
-                ";
-        exit;
+    header("Location: index.php");
+    exit;
 }
 $payto = $_SESSION['username'];
 
-// The withdrawal processing logic has been moved securely to withdraw.php
+// Handle Leg Placement Preference Update
+$leg_update_msg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_leg_pref') {
+    $new_leg = strtoupper(trim($_POST['default_leg'] ?? 'AUTO'));
+    if (in_array($new_leg, ['AUTO', 'L', 'R'])) {
+        mlmp_pdo_execute($pdo, "UPDATE affiliateuser SET default_leg = ? WHERE username = ?", [$new_leg, $payto]);
+        $leg_update_msg = "Placement preference successfully saved!";
+    }
+}
 
 // Fetch chart data
 $ref_chart_data = [];
@@ -49,7 +53,7 @@ if (!empty($ref_chart_data)) {
 }
 
 // Fetch user info
-$profile_row = mlmp_pdo_fetch($pdo, "SELECT id, fname, email, doj, active, username, address, pcktaken, tamount, country, launch_time, is_binary_qualified FROM affiliateuser WHERE username = ?", [$_SESSION['username']]);
+$profile_row = mlmp_pdo_fetch($pdo, "SELECT id, fname, email, doj, active, username, address, pcktaken, tamount, country, launch_time, is_binary_qualified, default_leg FROM affiliateuser WHERE username = ?", [$_SESSION['username']]);
 $aid     = $profile_row['id']       ?? 0;
 $name    = $profile_row['fname']    ?? '';
 $email   = $profile_row['email']    ?? '';
@@ -60,6 +64,7 @@ $ear     = $profile_row['tamount']  ?? 0;
 $coun    = $profile_row['country']  ?? '';
 $launch_time = $profile_row['launch_time'] ?? null;
 $is_binary_qualified = (int)($profile_row['is_binary_qualified'] ?? 0);
+$user_leg = $profile_row['default_leg'] ?? 'AUTO';
 
 $pname   = ''; $pdetails = ''; $pprice = 0; $pcur = ''; $ptax = 0; $mpay = 0;
 if ($pck) {
@@ -400,6 +405,44 @@ if ($acti != 1) {
           </button>
         </div>
         <div class="text-[11px] text-green-600 mt-1.5 hidden" id="copySuccess">Copied to clipboard!</div>
+      </div>
+
+      <!-- Binary Placement Preference Selector -->
+      <div class="mt-5 pt-4 border-t border-slate-100">
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-[0.8px]">Binary Placement Preference</label>
+          <span class="text-[11px] text-indigo-700 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+            Active: <?php echo ($user_leg === 'L' ? 'Left Leg' : ($user_leg === 'R' ? 'Right Leg' : 'Auto Balance')); ?>
+          </span>
+        </div>
+        <form method="POST" class="grid grid-cols-3 gap-2">
+          <input type="hidden" name="action" value="update_leg_pref">
+          <label class="cursor-pointer border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all <?php echo $user_leg === 'AUTO' ? 'bg-indigo-50 border-indigo-400 text-indigo-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'; ?>">
+            <input type="radio" name="default_leg" value="AUTO" class="sr-only" onchange="this.form.submit()" <?php if ($user_leg === 'AUTO') echo 'checked'; ?>>
+            <i class="fa-solid fa-scale-balanced mb-1 text-sm text-indigo-500"></i>
+            <span class="text-[11px] font-bold">Auto</span>
+            <span class="text-[9px] text-slate-500">Weaker Leg</span>
+          </label>
+
+          <label class="cursor-pointer border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all <?php echo $user_leg === 'L' ? 'bg-indigo-50 border-indigo-400 text-indigo-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'; ?>">
+            <input type="radio" name="default_leg" value="L" class="sr-only" onchange="this.form.submit()" <?php if ($user_leg === 'L') echo 'checked'; ?>>
+            <i class="fa-solid fa-arrow-left mb-1 text-sm text-indigo-500"></i>
+            <span class="text-[11px] font-bold">Left</span>
+            <span class="text-[9px] text-slate-500">Force Left</span>
+          </label>
+
+          <label class="cursor-pointer border rounded-xl p-2.5 text-center flex flex-col items-center justify-center transition-all <?php echo $user_leg === 'R' ? 'bg-indigo-50 border-indigo-400 text-indigo-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'; ?>">
+            <input type="radio" name="default_leg" value="R" class="sr-only" onchange="this.form.submit()" <?php if ($user_leg === 'R') echo 'checked'; ?>>
+            <i class="fa-solid fa-arrow-right mb-1 text-sm text-indigo-500"></i>
+            <span class="text-[11px] font-bold">Right</span>
+            <span class="text-[9px] text-slate-500">Force Right</span>
+          </label>
+        </form>
+        <?php if (!empty($leg_update_msg)): ?>
+          <div class="text-[11px] text-emerald-600 font-semibold mt-2 flex items-center gap-1">
+            <i class="fa-solid fa-circle-check"></i> <?php echo mlmp_escape($leg_update_msg); ?>
+          </div>
+        <?php endif; ?>
       </div>
 
     </div>

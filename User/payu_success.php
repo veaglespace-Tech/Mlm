@@ -79,21 +79,27 @@ if (!$user) {
 
             $placed = false;
             $boardCount = count($boards);
+            $prefLeg = $sponsor['default_leg'] ?? 'AUTO';
+
+            // Determine preferred placement order based on sponsor's setting
+            if ($prefLeg === 'AUTO') {
+                $prefOrder = ((int)($sponsor['left_count'] ?? 0) > (int)($sponsor['right_count'] ?? 0)) ? ['R', 'L'] : ['L', 'R'];
+            } elseif ($prefLeg === 'R') {
+                $prefOrder = ['R', 'L'];
+            } else {
+                $prefOrder = ['L', 'R'];
+            }
+
             foreach ($boards as $board) {
                 $bId = (int)$board['Id'];
-                $hasLeft = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'L'", [$bId]);
-                if ($hasLeft == 0) {
-                    $parentId = $bId;
-                    $position = 'L';
-                    $placed = true;
-                    break;
-                }
-                $hasRight = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = 'R'", [$bId]);
-                if ($hasRight == 0) {
-                    $parentId = $bId;
-                    $position = 'R';
-                    $placed = true;
-                    break;
+                foreach ($prefOrder as $trySide) {
+                    $hasChild = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM affiliateuser WHERE parent_id = ? AND position = ?", [$bId, $trySide]);
+                    if ($hasChild == 0) {
+                        $parentId = $bId;
+                        $position = $trySide;
+                        $placed = true;
+                        break 2;
+                    }
                 }
             }
 
@@ -110,7 +116,7 @@ if (!$user) {
 
                 $newVirtualNode = mlmp_pdo_fetch($pdo, "SELECT Id FROM affiliateuser WHERE username = ?", [$newBoardUsername]);
                 $parentId = (int)$newVirtualNode['Id'];
-                $position = 'L';
+                $position = $prefOrder[0];
             }
         }
 

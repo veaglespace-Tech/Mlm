@@ -2,7 +2,7 @@
 include_once ("z_db.php");
 session_start();
 if (!isset($_SESSION['adminidusername'])) {
-    print "<script>window.location='index.php';</script>";
+    header("Location: index.php");
     exit;
 }
 ensure_payout_schema($pdo);
