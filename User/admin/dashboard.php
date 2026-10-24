@@ -74,14 +74,25 @@ $package_revenue_split = mlmp_pdo_fetch_all($pdo, "
     GROUP BY p.id, p.name
 ");
 
-// Fetch recent online payment records (PayU/online)
+// --- Pagination for Recent Payments on Dashboard ---
+$pay_per_page = 10;
+$pay_current_page = max(1, (int)($_GET['pay_page'] ?? 1));
+$total_recent_payments = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM payu_payments WHERE gateway = 'PayU'");
+$pay_total_pages = max(1, (int)ceil($total_recent_payments / $pay_per_page));
+if ($pay_current_page > $pay_total_pages) {
+    $pay_current_page = $pay_total_pages;
+}
+$pay_offset = ($pay_current_page - 1) * $pay_per_page;
+
+// Fetch paginated recent online payment records (PayU/online) - Newest first
 $recent_payments = mlmp_pdo_fetch_all($pdo, "
     SELECT p.id, p.transacid, p.price, p.currency, p.date, u.username, pkg.name AS package_name
     FROM payu_payments p
     LEFT JOIN affiliateuser u ON u.Id = p.orderid
     LEFT JOIN packages pkg ON pkg.id = u.pcktaken
     WHERE p.gateway = 'PayU'
-    ORDER BY p.id ASC
+    ORDER BY p.id DESC
+    LIMIT $pay_per_page OFFSET $pay_offset
 ");
 
 // Fetch Facebook/Twitter links safely
@@ -288,10 +299,16 @@ include("layout_header.php");
 </div>
 
 <!-- Recent Payment Records -->
-<div class="mb-8">
+<div id="recentPaymentsSection" class="mb-8">
   <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 text-sm font-bold text-slate-900 flex items-center gap-2">
-      <i class="fa-solid fa-money-check-dollar text-green-500"></i> Recent Online Payment Records
+    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div class="text-sm font-bold text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-money-check-dollar text-green-500"></i> Recent Online Payment Records
+        <span class="bg-slate-100 text-slate-600 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-slate-200"><?php echo $total_recent_payments; ?> Total</span>
+      </div>
+      <a href="payments.php" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1">
+        View Full Ledger <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      </a>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
@@ -325,6 +342,52 @@ include("layout_header.php");
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination Controls -->
+    <?php if ($pay_total_pages > 1): ?>
+    <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div class="text-slate-500 font-medium">
+            Showing page <strong class="text-slate-800"><?php echo $pay_current_page; ?></strong> of <strong class="text-slate-800"><?php echo $pay_total_pages; ?></strong> &mdash; records <strong class="text-slate-800"><?php echo ($pay_offset + 1); ?></strong>-<strong><?php echo min($total_recent_payments, $pay_offset + $pay_per_page); ?></strong> of <strong><?php echo $total_recent_payments; ?></strong>
+        </div>
+        <div class="flex items-center gap-1">
+            <?php
+            $pay_base_url = '?pay_page=';
+            $pay_anchor = '#recentPaymentsSection';
+            if ($pay_current_page > 1): ?>
+                <a href="<?php echo $pay_base_url . ($pay_current_page - 1) . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
+                </a>
+            <?php endif; ?>
+
+            <?php
+            $range = 2;
+            $start = max(1, $pay_current_page - $range);
+            $end = min($pay_total_pages, $pay_current_page + $range);
+            if ($start > 1): ?>
+                <a href="<?php echo $pay_base_url . '1' . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">1</a>
+                <?php if ($start > 2): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+            <?php endif; ?>
+
+            <?php for ($p = $start; $p <= $end; $p++): ?>
+                <a href="<?php echo $pay_base_url . $p . $pay_anchor; ?>" 
+                   class="px-2.5 py-1.5 rounded-lg border font-bold transition-all shadow-sm <?php echo ($p === $pay_current_page) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600'; ?>">
+                    <?php echo $p; ?>
+                </a>
+            <?php endfor; ?>
+
+            <?php if ($end < $pay_total_pages): ?>
+                <?php if ($end < $pay_total_pages - 1): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+                <a href="<?php echo $pay_base_url . $pay_total_pages . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"><?php echo $pay_total_pages; ?></a>
+            <?php endif; ?>
+
+            <?php if ($pay_current_page < $pay_total_pages): ?>
+                <a href="<?php echo $pay_base_url . ($pay_current_page + 1) . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
+                    Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
                 
