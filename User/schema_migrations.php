@@ -1,6 +1,7 @@
 <?php
 // schema_migrations.php - Handles dynamic table and column creation
 
+if (!function_exists('ensure_binary_schema')) {
 function ensure_binary_schema(PDO $pdo): void {
     $required = [
         'parent_id' => "ALTER TABLE affiliateuser ADD parent_id INT NULL DEFAULT NULL AFTER referedby",
@@ -47,7 +48,9 @@ function ensure_binary_schema(PDO $pdo): void {
         UNIQUE KEY idx_user_pair (user_id, pair_no)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
+}
 
+if (!function_exists('ensure_package_schema')) {
 function ensure_package_schema(PDO $pdo): void {
     $required = [
         'binary_percent' => "ALTER TABLE packages ADD binary_percent DECIMAL(5,2) NOT NULL DEFAULT 30.00 AFTER validity",
@@ -68,7 +71,9 @@ function ensure_package_schema(PDO $pdo): void {
         }
     }
 }
+}
 
+if (!function_exists('ensure_payout_schema')) {
 function ensure_payout_schema(PDO $pdo): void {
     $required = [
         'reviewed_at' => "ALTER TABLE payments ADD reviewed_at DATETIME NULL DEFAULT NULL AFTER createdtime",
@@ -87,7 +92,9 @@ function ensure_payout_schema(PDO $pdo): void {
         }
     }
 }
+}
 
+if (!function_exists('ensure_pending_schema')) {
 function ensure_pending_schema(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS pending_registrations (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -119,7 +126,9 @@ function ensure_pending_schema(PDO $pdo): void {
         rejected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
+}
 
+if (!function_exists('ensure_settings_referral_schema')) {
 function ensure_settings_referral_schema(PDO $pdo): void {
     $existing = [];
     $rows = mlmp_pdo_fetch_all($pdo, "SHOW COLUMNS FROM settings");
@@ -139,7 +148,9 @@ function ensure_settings_referral_schema(PDO $pdo): void {
         }
     }
 }
+}
 
+if (!function_exists('ensure_username_length_schema')) {
 function ensure_username_length_schema(PDO $pdo): void {
     try {
         $pdo->exec("ALTER TABLE affiliateuser MODIFY username VARCHAR(50) NOT NULL");
@@ -156,4 +167,92 @@ function ensure_username_length_schema(PDO $pdo): void {
         $pdo->exec("ALTER TABLE rejected_registrations MODIFY referedby VARCHAR(50) NOT NULL");
     } catch (Exception $e) {}
 }
+}
 
+if (!function_exists('ensure_leaderboard_schema')) {
+function ensure_leaderboard_schema(PDO $pdo): void {
+    $existing = [];
+    $rows = mlmp_pdo_fetch_all($pdo, "SHOW COLUMNS FROM affiliateuser");
+    foreach ($rows as $row) {
+        $existing[$row['Field']] = true;
+    }
+
+    $required = [
+        'rank_title' => "ALTER TABLE affiliateuser ADD rank_title VARCHAR(50) NOT NULL DEFAULT 'Starter' AFTER is_binary_qualified",
+    ];
+
+    foreach ($required as $column => $ddl) {
+        if (!isset($existing[$column])) {
+            $pdo->exec($ddl);
+        }
+    }
+}
+}
+
+if (!function_exists('ensure_ticket_schema')) {
+function ensure_ticket_schema(PDO $pdo): void {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS support_tickets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        username VARCHAR(50) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        category ENUM('general','technical','payment','account','other') NOT NULL DEFAULT 'general',
+        priority ENUM('low','medium','high') NOT NULL DEFAULT 'medium',
+        status ENUM('open','in_progress','resolved','closed') NOT NULL DEFAULT 'open',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user_id (user_id),
+        INDEX idx_status (status),
+        INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS ticket_replies (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_id INT NOT NULL,
+        sender_type ENUM('user','admin') NOT NULL,
+        sender_name VARCHAR(100) NOT NULL,
+        message TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ticket_id (ticket_id),
+        FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+}
+
+if (!function_exists('ensure_kyc_schema')) {
+function ensure_kyc_schema(PDO $pdo): void {
+    // Add kyc_status to affiliateuser
+    $existing = [];
+    $rows = mlmp_pdo_fetch_all($pdo, "SHOW COLUMNS FROM affiliateuser");
+    foreach ($rows as $row) {
+        $existing[$row['Field']] = true;
+    }
+
+    if (!isset($existing['kyc_status'])) {
+        $pdo->exec("ALTER TABLE affiliateuser ADD kyc_status ENUM('not_submitted','pending','approved','rejected') NOT NULL DEFAULT 'not_submitted'");
+    }
+
+    // Create kyc_documents table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS kyc_documents (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        username VARCHAR(50) NOT NULL,
+        full_name VARCHAR(150) NOT NULL,
+        aadhar_number VARCHAR(20) NULL,
+        pan_number VARCHAR(20) NULL,
+        aadhar_front VARCHAR(255) NULL,
+        aadhar_back VARCHAR(255) NULL,
+        pan_card VARCHAR(255) NULL,
+        status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+        reject_reason TEXT NULL,
+        admin_notes TEXT NULL,
+        submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        reviewed_at DATETIME NULL DEFAULT NULL,
+        reviewed_by VARCHAR(50) NULL DEFAULT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user_id (user_id),
+        INDEX idx_status (status),
+        INDEX idx_submitted_at (submitted_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+}

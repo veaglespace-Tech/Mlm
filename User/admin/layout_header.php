@@ -90,6 +90,10 @@ if (!function_exists('nav_active')) {
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-gauge-high"></i></span>
         Dashboard
       </a>
+      <a href="company_analysis.php" <?php echo nav_active('company_analysis', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-chart-pie"></i></span>
+        Company Analysis
+      </a>
       <a href="downline.php" <?php echo nav_active('downline', $active_nav); ?>>
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-network-wired"></i></span>
         My Network
@@ -147,6 +151,14 @@ if (!function_exists('nav_active')) {
       <a href="payrequest.php" <?php echo nav_active('payrequest', $active_nav); ?>>
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-hand-holding-dollar"></i></span>
         Payment Requests
+      </a>
+      <a href="tickets.php" <?php echo nav_active('tickets', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-headset"></i></span>
+        Support Tickets
+      </a>
+      <a href="kyc.php" <?php echo nav_active('kyc', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-id-card"></i></span>
+        KYC Approvals
       </a>
     </nav>
 

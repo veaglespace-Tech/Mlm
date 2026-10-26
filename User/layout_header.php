@@ -91,6 +91,10 @@ function nav_active($key, $active_nav) {
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-gauge-high"></i></span>
         Dashboard
       </a>
+      <a href="leaderboard.php" <?php echo nav_active('leaderboard', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-ranking-star"></i></span>
+        Leaderboard
+      </a>
 
       <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Account</div>
       <a href="downline.php" <?php echo nav_active('downline', $active_nav); ?>>
@@ -112,6 +116,10 @@ function nav_active($key, $active_nav) {
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-clock-rotate-left"></i></span>
         Payment History
       </a>
+      <a href="kyc.php" <?php echo nav_active('kyc', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-id-card"></i></span>
+        KYC Verification
+      </a>
 
       <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Support</div>
       <a href="notifications.php" <?php echo nav_active('notifications', $active_nav); ?>>
@@ -121,6 +129,10 @@ function nav_active($key, $active_nav) {
       <a href="profile.php" <?php echo nav_active('profile', $active_nav); ?>>
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-circle-user"></i></span>
         My Profile
+      </a>
+      <a href="tickets.php" <?php echo nav_active('tickets', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-ticket"></i></span>
+        Support Tickets
       </a>
       <a href="contact.php" <?php echo nav_active('contact', $active_nav); ?>>
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-headset"></i></span>

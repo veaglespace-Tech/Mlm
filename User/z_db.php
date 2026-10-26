@@ -39,6 +39,9 @@ mysqli_query($con, "SET sql_mode = ''");
 if ($con->connect_errno) {
     echo "Failed to connect to MySQL: (" . $con->connect_errno . ") " . $con->connect_error;
 }
+
+require_once __DIR__ . '/schema_migrations.php';
+
 // Global Helper Functions for Secure Queries
 function mlmp_pdo_count($pdo, $sql, $params = []) {
     $stmt = $pdo->prepare($sql);
@@ -109,6 +112,7 @@ function mlmp_build_referral_url(string $baseUrl, string $username): string {
     return rtrim($baseUrl, '/') . '/User/signup.php?aff=' . rawurlencode($username);
 }
 
+if (!function_exists('ensure_binary_schema')) {
 function ensure_binary_schema(PDO $pdo): void {
     $required = [
         'parent_id' => "ALTER TABLE affiliateuser ADD parent_id INT NULL DEFAULT NULL AFTER referedby",
@@ -155,7 +159,9 @@ function ensure_binary_schema(PDO $pdo): void {
         UNIQUE KEY idx_user_pair (user_id, pair_no)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
+}
 
+if (!function_exists('ensure_package_schema')) {
 function ensure_package_schema(PDO $pdo): void {
     $required = [
         'binary_percent' => "ALTER TABLE packages ADD binary_percent DECIMAL(5,2) NOT NULL DEFAULT 30.00 AFTER validity",
@@ -176,7 +182,9 @@ function ensure_package_schema(PDO $pdo): void {
         }
     }
 }
+}
 
+if (!function_exists('ensure_payout_schema')) {
 function ensure_payout_schema(PDO $pdo): void {
     $required = [
         'reviewed_at' => "ALTER TABLE payments ADD reviewed_at DATETIME NULL DEFAULT NULL AFTER createdtime",
@@ -195,7 +203,9 @@ function ensure_payout_schema(PDO $pdo): void {
         }
     }
 }
+}
 
+if (!function_exists('ensure_pending_schema')) {
 function ensure_pending_schema(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS pending_registrations (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -227,7 +237,9 @@ function ensure_pending_schema(PDO $pdo): void {
         rejected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
+}
 
+if (!function_exists('ensure_settings_referral_schema')) {
 function ensure_settings_referral_schema(PDO $pdo): void {
     $existing = [];
     $rows = mlmp_pdo_fetch_all($pdo, "SHOW COLUMNS FROM settings");
@@ -247,7 +259,9 @@ function ensure_settings_referral_schema(PDO $pdo): void {
         }
     }
 }
+}
 
+if (!function_exists('ensure_username_length_schema')) {
 function ensure_username_length_schema(PDO $pdo): void {
     try {
         $pdo->exec("ALTER TABLE affiliateuser MODIFY username VARCHAR(50) NOT NULL");
@@ -263,6 +277,7 @@ function ensure_username_length_schema(PDO $pdo): void {
         $pdo->exec("ALTER TABLE rejected_registrations MODIFY username VARCHAR(50) NOT NULL");
         $pdo->exec("ALTER TABLE rejected_registrations MODIFY referedby VARCHAR(50) NOT NULL");
     } catch (Exception $e) {}
+}
 }
 ensure_username_length_schema($pdo);
 
