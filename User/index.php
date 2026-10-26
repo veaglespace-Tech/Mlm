@@ -1,92 +1,130 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include_once("z_db.php");
 include_once("password_helper.php");
+
+// If already logged in, redirect directly to dashboard
+if (isset($_SESSION['username']) && !empty($_SESSION['username'])) {
+    header("Location: dashboard.php");
+    exit;
+}
+if (isset($_SESSION['adminidusername']) && !empty($_SESSION['adminidusername'])) {
+    header("Location: admin/dashboard.php");
+    exit;
+}
+
 $settings = mlmp_pdo_fetch($pdo, "SELECT maintain FROM settings WHERE sno=0");
 $main = $settings['maintain'] ?? 0;
 if($main==1 || $main==3)
 {
-	print "
-				<script language='javascript'>
-					window.location = 'maintain.php';
-				</script>
-			";
+    header("Location: maintain.php");
+    exit;
 }
 
-if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
+$errormsg = "";
+
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']))
 {
-$status = "OK"; //initial status
-$msg="";
-	$username=$_POST['username'] ?? ''; //fetching details through post method
-     $password = $_POST['password'] ?? '';
+    $login_input = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $status = "OK";
+    $msg = "";
 
-if ( strlen($username) < 6 ){
-$msg=$msg."Username must be more than 5 char legth<BR>";
-$status= "NOTOK";}
-
-if ( strlen($password) < 6 ){ //checking if password is greater then 8 or not
-$msg=$msg."Password must be more than 5 char legth<BR>";
-$status= "NOTOK";}
-
-if($status=="OK"){
-
-// Check pending_registrations first
-$pendingRow = mlmp_pdo_fetch($pdo, "SELECT admin_approval_status FROM pending_registrations WHERE username = ?", [$username]);
-if ($pendingRow) {
-    if ($pendingRow['admin_approval_status'] === 'Rejected') {
-        header("Location: rejected.php?username=" . urlencode($username));
-        exit;
-    } else if ($pendingRow['admin_approval_status'] === 'Pending') {
-        $msg = "Your account is pending admin approval.";
+    if (strlen($login_input) < 3) {
+        $msg .= "Username or Email must be at least 3 characters.<br>";
         $status = "NOTOK";
     }
+
+    if (strlen($password) < 4) {
+        $msg .= "Password must be at least 4 characters.<br>";
+        $status = "NOTOK";
+    }
+
+    if ($status === "OK") {
+        // 1. Search in affiliateuser by username OR email
+        $userRow = mlmp_pdo_fetch(
+            $pdo,
+            "SELECT Id, username, email, password, active, level FROM affiliateuser WHERE (username = ? OR email = ?) LIMIT 1",
+            [$login_input, $login_input]
+        );
+
+        if ($userRow) {
+            if (mlmp_password_matches($password, $userRow['password'])) {
+                if ((int)$userRow['active'] === 1) {
+                    // Password upgrade if legacy plaintext
+                    mlmp_upgrade_password_hash($pdo, $userRow['username'], $password, $userRow['password']);
+
+                    if ((int)$userRow['level'] === 1) {
+                        // Admin user login
+                        $_SESSION['adminidusername'] = $userRow['username'];
+                        header("Location: admin/dashboard.php");
+                        exit;
+                    } else {
+                        // Member / affiliate user login
+                        $_SESSION['username'] = $userRow['username'];
+                        header("Location: dashboard.php");
+                        exit;
+                    }
+                } else {
+                    // Account inactive / pending payment
+                    $retryLink = "payu_payment.php?retry_username=" . urlencode($userRow['username']);
+                    $errormsg = "
+                    <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                        <strong>Account Inactive:</strong> Your registration is complete but your account is not active yet.<br>
+                        <a href='{$retryLink}' style='text-decoration: underline; font-weight: 700; color: #4f46e5; display: inline-block; margin-top: 6px;'>
+                            &rarr; Click here to complete payment & activate your account
+                        </a>
+                    </div>";
+                }
+            } else {
+                $errormsg = "
+                <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                    <strong>Invalid Credentials:</strong> Username/Email and password do not match.
+                </div>";
+            }
+        } else {
+            // 2. Not found in affiliateuser: check pending_registrations
+            $pendingRow = mlmp_pdo_fetch(
+                $pdo,
+                "SELECT username, email, password, admin_approval_status FROM pending_registrations WHERE (username = ? OR email = ?) LIMIT 1",
+                [$login_input, $login_input]
+            );
+
+            if ($pendingRow) {
+                if ($pendingRow['admin_approval_status'] === 'Rejected') {
+                    header("Location: rejected.php?username=" . urlencode($pendingRow['username']));
+                    exit;
+                } else if ($pendingRow['admin_approval_status'] === 'Pending') {
+                    $retryLink = "payu_payment.php?retry_username=" . urlencode($pendingRow['username']);
+                    $errormsg = "
+                    <div class='alert' style='background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); color: #d97706;'>
+                        <strong>Pending Approval / Payment:</strong> Your account is currently pending admin approval or payment.<br>
+                        <a href='{$retryLink}' style='text-decoration: underline; font-weight: 700; color: #4f46e5; display: inline-block; margin-top: 6px;'>
+                            &rarr; Click here to proceed with payment
+                        </a>
+                    </div>";
+                } else {
+                    $errormsg = "
+                    <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                        <strong>Account Status:</strong> Registration pending. Please contact admin.
+                    </div>";
+                }
+            } else {
+                $errormsg = "
+                <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                    <strong>Invalid Credentials:</strong> Username or Email not found. If you are new, please register first.
+                </div>";
+            }
+        }
+    } else {
+        $errormsg = "
+        <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+            <strong>Please Fix Below Errors:</strong><br>{$msg}
+        </div>";
+    }
 }
-
-if ($status == "OK") {
-// Retrieve user details and verify the password in PHP so old plaintext
-// passwords can be migrated to password_hash without breaking login.
-$userRow = mlmp_pdo_fetch($pdo, "SELECT password FROM affiliateuser WHERE username = ? AND active = 1 AND level = 2 LIMIT 1", [$username]);
-$num = 0;
-if ($userRow && mlmp_password_matches($password, $userRow['password'])) {
-    $num = 1;
-    $storedPassword = $userRow['password'];
-}
-
-if (($num) == 1) {
-
-mlmp_upgrade_password_hash($pdo, $username, $password, $storedPassword);
-session_start();
-        // Set username session variable
-        $_SESSION['username'] = $username;
-		
-        // Jump to secured page
-		print "
-				<script language='javascript'>
-					window.location = 'dashboard.php?page=dashboard%location=index.php';
-				</script>"; 
-}
-
-
-
-else{
-$errormsg= "
-<div class='alert alert-danger'>
-                    <button type='button' class='close' data-dismiss='alert'>&times;</button>
-                    <i class='fa fa-ban-circle'></i><strong>Please Fix Below Errors : </br></strong>Username And Password Does Not Match Or Your Account Is Inactive.</div>"; //printing error if found in validation
-				
-}}
-}
-else {
-        
-$errormsg= "
-<div class='alert alert-danger'>
-                    <button type='button' class='close' data-dismiss='alert'>&times;</button>
-                    <i class='fa fa-ban-circle'></i><strong>Please Fix Below Errors : </br></strong>".$msg."</div>"; //printing error if found in validation
-				
-	 
-}
-}
-
-
 ?>
 
 <!DOCTYPE html>
@@ -351,14 +389,16 @@ function googleTranslateElementInit() {
         <!-- Form Container -->
         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-6">
           
-          <!-- Username Input -->
+          <!-- Username or Email Input -->
           <div class="space-y-2">
-            <label class="text-xs font-bold uppercase tracking-wider text-muted-custom" for="username">Username</label>
+            <label class="text-xs font-bold uppercase tracking-wider text-muted-custom" for="username">Username or Email</label>
             <div class="relative">
               <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-muted-custom pointer-events-none transition-colors duration-200">
                 <i class="fa-solid fa-user text-xs"></i>
               </span>
-              <input type="text" id="username" name="username" placeholder="Enter your username" minlength="6" required
+              <input type="text" id="username" name="username" placeholder="Enter your username or email" minlength="3" required
+                     value="<?php echo htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                     autocomplete="username"
                      class="custom-input w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none">
             </div>
           </div>
@@ -373,7 +413,8 @@ function googleTranslateElementInit() {
               <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-muted-custom pointer-events-none transition-colors duration-200">
                 <i class="fa-solid fa-lock text-xs"></i>
               </span>
-              <input type="password" id="password" name="password" placeholder="Enter your password" minlength="6" required
+              <input type="password" id="password" name="password" placeholder="Enter your password" minlength="4" required
+                     autocomplete="current-password"
                      class="custom-input w-full rounded-xl py-3 pl-10 pr-10 text-sm outline-none">
               <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-custom hover:text-indigo-500 transition-colors duration-200 focus:outline-none cursor-pointer">
                 <i class="fa-regular fa-eye text-sm"></i>
