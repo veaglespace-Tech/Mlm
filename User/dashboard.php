@@ -269,6 +269,27 @@ if ($acti != 1) {
   </div>
 </div>
 
+<!-- NP Academy Learning Hub Banner -->
+<div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-900 rounded-2xl p-5 sm:p-6 mb-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg border border-indigo-500/20 text-white relative overflow-hidden">
+  <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-purple-500/15 blur-2xl pointer-events-none"></div>
+  <div class="flex items-center gap-4 relative z-10">
+    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl shrink-0 shadow-lg shadow-indigo-500/30">
+      <i class="fa-solid fa-graduation-cap"></i>
+    </div>
+    <div>
+      <div class="flex items-center gap-2">
+        <h3 class="font-bold text-base text-white">NP Academy • Learning Portal</h3>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 border border-emerald-400/30 text-emerald-300">VIP All-Access</span>
+      </div>
+      <p class="text-xs text-indigo-200 mt-0.5">Master network marketing, direct sales, and business strategy with exclusive training modules.</p>
+    </div>
+  </div>
+  <a href="learning.php" class="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all transform hover:-translate-y-0.5">
+    <span>Launch Academy</span>
+    <i class="fa-solid fa-arrow-right text-[11px]"></i>
+  </a>
+</div>
+
 <!-- Daily / Weekly / Monthly Earnings Section -->
 <div class="bg-white border border-slate-200 rounded-2xl shadow-sm mb-7 overflow-hidden">
   <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-3">

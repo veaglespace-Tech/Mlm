@@ -95,6 +95,10 @@ function nav_active($key, $active_nav) {
         <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-ranking-star"></i></span>
         Leaderboard
       </a>
+      <a href="learning.php" <?php echo nav_active('learning', $active_nav); ?>>
+        <span class="text-base w-5 text-center shrink-0"><i class="fa-solid fa-graduation-cap"></i></span>
+        Learning Portal
+      </a>
 
       <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-[1.2px] px-2.5 pt-2 pb-1 mt-2">Account</div>
       <a href="downline.php" <?php echo nav_active('downline', $active_nav); ?>>
