@@ -3,10 +3,15 @@ if(!isset($_SESSION)){
     session_start();
 }
 
+// Clear lock if user explicitly wants to retry
+if (isset($_GET['clear_lock'])) {
+    unset($_SESSION['checkout_lock']);
+}
+
 // Check if a payment is already in progress
 if (isset($_SESSION['checkout_lock']) && $_SESSION['checkout_lock'] > time()) {
     $remaining = $_SESSION['checkout_lock'] - time();
-    $minutes = ceil($remaining / 60);
+    $seconds = max(1, $remaining);
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -22,18 +27,16 @@ if (isset($_SESSION['checkout_lock']) && $_SESSION['checkout_lock'] > time()) {
             <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
                 <i class="fa-solid fa-lock"></i>
             </div>
-            <h2 class="text-xl font-bold mb-3 text-slate-900">Payment Already in Progress</h2>
+            <h2 class="text-xl font-bold mb-3 text-slate-900">Payment Session Active</h2>
             <p class="text-slate-600 mb-6 text-sm leading-relaxed">
-                We detected that you recently initiated a payment session. To prevent duplicate charges, please complete your transaction in the other window. 
-                <br><br>
-                If your previous attempt failed or you closed the window, you can try again in <strong class="text-amber-600"><?php echo $minutes; ?> minutes</strong>.
+                If your previous window closed or transaction failed, you can unlock and retry immediately below.
             </p>
             <div class="flex flex-col gap-3">
-                <button onclick="window.history.back()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors">
-                    Go Back
-                </button>
-                <a href="dashboard.php" class="text-indigo-600 hover:text-indigo-800 font-semibold text-sm transition-colors">
-                    Return to Dashboard
+                <a href="payu_checkout_redirect.php?clear_lock=1" onclick="window.history.back();" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors">
+                    <i class="fa-solid fa-arrow-rotate-right mr-1.5"></i> Try Again Now
+                </a>
+                <a href="payu_payment.php" class="text-slate-600 hover:text-slate-800 text-sm font-semibold transition-colors">
+                    Back to Checkout
                 </a>
             </div>
         </div>
@@ -43,8 +46,8 @@ if (isset($_SESSION['checkout_lock']) && $_SESSION['checkout_lock'] > time()) {
     exit;
 }
 
-// Lock the checkout for 10 minutes (600 seconds)
-$_SESSION['checkout_lock'] = time() + 600;
+// Lock the checkout for 60 seconds
+$_SESSION['checkout_lock'] = time() + 60;
 
 $payu_url = $_POST['PAYU_BASE_URL'] ?? '';
 if(empty($payu_url)) {

@@ -160,8 +160,9 @@ $MERCHANT_KEY = $_ENV['PAYU_MERCHANT_KEY'] ?? "GKJE3Z";
 $SALT = $_ENV['PAYU_SALT'] ?? "0zqiCnB4GslxAanSxjEAutWkWuggFiGs";
 $SALT_V2 = $_ENV['PAYU_SALT_V2'] ?? "";
 
-$payuEnv = strtolower($_ENV['PAYU_ENV'] ?? 'sandbox');
-$isSandbox = ($payuEnv === 'sandbox');
+$rawEnv = $_ENV['PAYU_ENV'] ?? 'sandbox';
+$payuEnv = strtolower(trim(explode('#', explode(';', (string)$rawEnv)[0])[0]));
+$isSandbox = ($payuEnv === 'sandbox' || $payuEnv === 'test');
 $PAYU_BASE_URL = $isSandbox ? "https://test.payu.in/_payment" : "https://secure.payu.in/_payment";
 
 $txnid = substr('MLMP' . strtoupper(hash('sha256', $username . random_int(100000, 999999) . microtime(true))), 0, 20);
@@ -353,9 +354,27 @@ $_layout_brand = 'MLM';
                     <input type="hidden" name="curl" value="<?php echo htmlspecialchars($furl, ENT_QUOTES, 'utf-8'); ?>" />
                     
                     <button type="submit" class="pay-btn">
-                        <i class="fa-solid fa-lock"></i> Pay Securely via PayU
+                        <i class="fa-solid fa-lock"></i> Pay via PayU Gateway (<?php echo $isSandbox ? 'Test Mode' : 'Live'; ?>)
                     </button>
                 </form>
+
+                <?php if ($isSandbox): ?>
+                    <form action="payu_success.php" method="post" style="margin-top: 14px;">
+                        <input type="hidden" name="username" value="<?php echo htmlspecialchars($username, ENT_QUOTES, 'utf-8'); ?>" />
+                        <input type="hidden" name="udf1" value="<?php echo htmlspecialchars($username, ENT_QUOTES, 'utf-8'); ?>" />
+                        <input type="hidden" name="txnid" value="<?php echo $txnid; ?>" />
+                        <input type="hidden" name="amount" value="<?php echo $amount; ?>" />
+                        <input type="hidden" name="productinfo" value="<?php echo htmlspecialchars($productinfo, ENT_QUOTES, 'utf-8'); ?>" />
+                        <input type="hidden" name="firstname" value="<?php echo htmlspecialchars($firstname, ENT_QUOTES, 'utf-8'); ?>" />
+                        <input type="hidden" name="email" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'utf-8'); ?>" />
+                        <button type="submit" style="width:100%; background: linear-gradient(135deg, #059669, #10b981); color:white; border:none; border-radius:12px; padding:14px; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow: 0 4px 14px rgba(5,150,105,0.25); transition: opacity 0.2s;">
+                            <i class="fa-solid fa-bolt"></i> Instant Test Payment (Direct Activate)
+                        </button>
+                    </form>
+                    <div style="text-align:center; font-size:11px; color:#10b981; margin-top:8px; font-weight:600;">
+                        <i class="fa-solid fa-circle-check"></i> Sandbox mode: Click to activate account instantly without real money
+                    </div>
+                <?php endif; ?>
                 
                 <div style="text-align:center; color:var(--text-darker); font-size:12px; margin-top:16px;">
                     <i class="fa-solid fa-check-circle" style="color:var(--accent-green); margin-right:4px;"></i> 256-bit Secure Encryption
