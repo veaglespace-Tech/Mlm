@@ -432,8 +432,10 @@ function render_member($fname, $username, $email, $doj, $active, $referred_by = 
     $badge_bc   = ($active == 1) ? 'border-emerald-500/20'  : 'border-red-500/20';
     $badge_col  = ($active == 1) ? 'text-emerald-600' : 'text-red-600';
     $ref_html   = $referred_by ? "<span class='text-[10px] text-slate-600 ml-1'>via " . htmlspecialchars($referred_by, ENT_QUOTES, 'UTF-8') . "</span>" : '';
+    $search_txt = strtolower(htmlspecialchars($fname . ' ' . $username . ' ' . $email . ' ' . $referred_by, ENT_QUOTES, 'UTF-8'));
+    $status_txt = ($active == 1) ? 'active' : 'pending';
     echo "
-    <div class='flex items-start gap-3 p-3.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors mb-2 shadow-sm'>
+    <div class='level-member-card flex items-start gap-3 p-3.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors mb-2 shadow-sm' data-search='{$search_txt}' data-status='{$status_txt}'>
       <div class='w-2 h-2 rounded-full mt-1.5 shrink-0 shadow-[0_0_8px_currentColor]' style='color:{$dot_color}; background-color:{$dot_color}'></div>
       <div class='flex-1 min-w-0'>
         <div class='text-[13px] font-bold text-slate-900 truncate'>" . htmlspecialchars($fname, ENT_QUOTES, 'UTF-8') . " <span class='text-[10px] font-bold text-white bg-indigo-500 px-1.5 py-0.5 rounded ml-1.5 align-middle'>@" . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . "</span></div>
@@ -903,8 +905,27 @@ function renderTreeHTML($node, $depth = 1) {
         </div>
     </div>
 
+    <!-- Live Search & Filter Bar for Downline Members -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 mb-5 shadow-sm flex items-center justify-between flex-wrap gap-3">
+        <div class="relative flex-1 min-w-[220px]">
+            <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+            <input type="text" id="downlineMemberSearchInput" placeholder="Search members by name, username, email or sponsor..."
+                   class="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all">
+            <button type="button" id="downlineClearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Clear">
+                <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="downlineStatusFilter" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20">
+                <option value="all">All Members</option>
+                <option value="active">Active Only</option>
+                <option value="pending">Pending Only</option>
+            </select>
+        </div>
+    </div>
+
     <!-- Legend -->
-    <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;font-size:12px;font-weight:500;color:#64748b;">
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:20px;font-size:12px;font-weight:500;color:#64748b;flex-wrap:wrap;">
       <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:5px;"></span>Active / Paid</span>
       <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:5px;"></span>Pending / Unpaid</span>
       <span style="margin-left:auto;font-size:11px;color:#334155;">Currency: <strong style="color:#a78bfa;"><?php echo htmlspecialchars($pckcur, ENT_QUOTES, 'UTF-8'); ?></strong></span>
@@ -937,7 +958,7 @@ function renderTreeHTML($node, $depth = 1) {
       $members = $ldata['members'];
       $earn    = $ldata['earn'];
     ?>
-    <div id="level<?php echo $i; ?>" style="display:<?php echo $i === 1 ? 'block' : 'none'; ?>;">
+    <div id="level<?php echo $i; ?>" class="level-content-panel" style="display:<?php echo $i === 1 ? 'block' : 'none'; ?>;">
       <div class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col mb-6">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-4">
           <div class="text-sm font-bold text-slate-900 flex items-center gap-2.5">
@@ -949,7 +970,7 @@ function renderTreeHTML($node, $depth = 1) {
             <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">+ <?php echo htmlspecialchars($pckcur, ENT_QUOTES, 'UTF-8'); ?> <?php echo number_format($earn, 2); ?></span>
           </div>
         </div>
-        <div class="p-5 flex flex-col gap-1.5">
+        <div class="p-5 flex flex-col gap-1.5 level-cards-container">
           <?php if (empty($members)): ?>
             <div style="text-align:center;padding:40px 20px;color:#334155;">
               <i class="fa-solid fa-users-slash" style="font-size:36px;display:block;margin-bottom:12px;color:#1e293b;"></i>
@@ -960,6 +981,10 @@ function renderTreeHTML($node, $depth = 1) {
               render_member($m['fname'], $m['username'], $m['email'], $m['doj'], $m['active'], $m['ref']);
             endforeach;
           endif; ?>
+          <div class="level-no-match hidden text-center py-8 text-slate-400 text-xs font-medium">
+            <i class="fa-solid fa-user-slash text-2xl mb-2 block text-slate-300"></i>
+            No members in Level <?php echo $i; ?> match your search.
+          </div>
         </div>
       </div>
     </div>
@@ -983,7 +1008,81 @@ function showLevel(n) {
             tab.style.borderColor = '#e2e8f0';
         }
     }
+    if (typeof filterLevelMembers === 'function') {
+        filterLevelMembers();
+    }
 }
+
+// Live debounced filter for unilevel members
+var downlineDebounceTimer = null;
+function filterLevelMembers() {
+    var searchInput = document.getElementById('downlineMemberSearchInput');
+    var statusFilter = document.getElementById('downlineStatusFilter');
+    var clearBtn = document.getElementById('downlineClearSearchBtn');
+    if (!searchInput || !statusFilter) return;
+
+    var query = (searchInput.value || '').trim().toLowerCase();
+    var status = (statusFilter.value || 'all').toLowerCase();
+
+    if (clearBtn) {
+        if (query.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+    }
+
+    var panels = document.querySelectorAll('.level-content-panel');
+    panels.forEach(function(panel) {
+        var cards = panel.querySelectorAll('.level-member-card');
+        var noMatch = panel.querySelector('.level-no-match');
+        var visibleCount = 0;
+
+        cards.forEach(function(card) {
+            var cardSearch = card.getAttribute('data-search') || '';
+            var cardStatus = card.getAttribute('data-status') || '';
+            var matchesQuery = !query || cardSearch.indexOf(query) !== -1;
+            var matchesStatus = (status === 'all') || (cardStatus === status);
+
+            if (matchesQuery && matchesStatus) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (noMatch) {
+            if (cards.length > 0 && visibleCount === 0) {
+                noMatch.classList.remove('hidden');
+            } else {
+                noMatch.classList.add('hidden');
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var searchInput = document.getElementById('downlineMemberSearchInput');
+    var statusFilter = document.getElementById('downlineStatusFilter');
+    var clearBtn = document.getElementById('downlineClearSearchBtn');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(downlineDebounceTimer);
+            downlineDebounceTimer = setTimeout(filterLevelMembers, 250);
+        });
+    }
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterLevelMembers);
+    }
+
+    if (clearBtn && searchInput) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            filterLevelMembers();
+            searchInput.focus();
+        });
+    }
+});
 
 function switchMainView(view) {
     var list = document.getElementById("main-list-view");

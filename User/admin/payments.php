@@ -25,8 +25,18 @@ $payments = mlmp_pdo_fetch_all($pdo, "SELECT * FROM payu_payments WHERE gateway 
 </div>
 
 <div class="bg-white border border-slate-200 shadow-sm rounded-2xl shadow-xl flex flex-col overflow-hidden mb-6">
-    <div class="px-5 py-4 border-b border-slate-200 bg-slate-50">
-        <h3 class="text-sm font-bold text-slate-900">PayU Payment History Logs</h3>
+    <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-receipt text-indigo-600"></i> PayU Payment History Logs
+        </h3>
+        <div class="flex items-center gap-2">
+            <label for="statusFilter" class="text-xs font-semibold text-slate-500">Filter Status:</label>
+            <select id="statusFilter" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-700 font-medium focus:outline-none focus:border-indigo-500 cursor-pointer">
+                <option value="">All Statuses</option>
+                <option value="Active/Paid">Active/Paid</option>
+                <option value="Inactive/Unpaid">Inactive/Unpaid</option>
+            </select>
+        </div>
     </div>
     <div class="p-6 overflow-x-auto">
         <table id="paymentsTable" class="w-full text-left border-collapse">
@@ -279,6 +289,23 @@ $(document).ready(function() {
         ],
         order: [], // Disable initial JS sorting so PHP order is kept
         pageLength: 25
+    });
+
+    var table = $('#paymentsTable').DataTable();
+
+    // Debounced search on DataTable
+    $('.dataTables_filter input').unbind().bind('input', function() {
+        var val = this.value;
+        clearTimeout(window._dt_timer);
+        window._dt_timer = setTimeout(function() {
+            table.search(val).draw();
+        }, 350);
+    });
+
+    // Custom status filter
+    $('#statusFilter').on('change', function() {
+        var val = $(this).val();
+        table.column(6).search(val ? '^' + val + '$' : '', true, false).draw();
     });
 });
 </script>

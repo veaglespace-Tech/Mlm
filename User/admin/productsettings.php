@@ -42,6 +42,31 @@ $products = mlmp_pdo_fetch_all($pdo, "SELECT * FROM products ORDER BY id ASC");
             
             <!-- Manage Products Tab -->
             <div class="tab-pane active" id="manage">
+                <!-- Search & Filter Toolbar -->
+                <div class="bg-white border border-slate-200 rounded-xl p-3.5 mb-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div class="relative flex-1 min-w-[200px]">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="prodSearchInput" placeholder="Live search products by name, description, ID..." 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="prodFilterSelect" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-indigo-500 transition-all cursor-pointer">
+                            <option value="all">All Products</option>
+                            <option value="active">Active Only</option>
+                            <option value="inactive">Inactive Only</option>
+                        </select>
+                        <span id="prodCountNotice" class="text-xs text-slate-500 font-semibold whitespace-nowrap px-2">
+                            <?php echo count($products); ?> products
+                        </span>
+                    </div>
+                </div>
+
+                <div id="prodEmptyNotice" class="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm hidden">
+                    <i class="fa-solid fa-box-open text-4xl text-slate-400 mb-3"></i>
+                    <h3 class="text-lg font-bold text-slate-700 mb-1">No Matching Products</h3>
+                    <p class="text-sm text-slate-500">No products match your search or filter selection.</p>
+                </div>
+
                 <?php if (count($products) === 0): ?>
                     <div class="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
                         <i class="fa-solid fa-box-open text-4xl text-slate-400 mb-3"></i>
@@ -58,7 +83,9 @@ $products = mlmp_pdo_fetch_all($pdo, "SELECT * FROM products ORDER BY id ASC");
                             $pemoji = $prod['emoji'];
                             $active = $prod['active'];
                         ?>
-                            <div class="bg-white border <?php echo $active ? 'border-indigo-200' : 'border-slate-200'; ?> rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative">
+                            <div class="prod-card bg-white border <?php echo $active ? 'border-indigo-200' : 'border-slate-200'; ?> rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative"
+                                 data-search-text="<?php echo htmlspecialchars(strtolower($pname . ' ' . $pdesc . ' ' . $picon . ' id:' . $id)); ?>"
+                                 data-status="<?php echo $active ? 'active' : 'inactive'; ?>">
                                 <?php if($active): ?>
                                     <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden">
                                         <div class="absolute transform rotate-45 bg-emerald-500 text-white text-[10px] font-bold py-1 right-[-35px] top-[15px] w-[120px] text-center shadow-sm">ACTIVE</div>
@@ -176,6 +203,14 @@ document.addEventListener("DOMContentLoaded", function() {
             const targetPane = document.querySelector(targetId);
             if (targetPane) targetPane.classList.add("active");
         });
+    });
+
+    initClientFilter({
+        searchInputId: 'prodSearchInput',
+        filterSelectId: 'prodFilterSelect',
+        rowSelector: '.prod-card',
+        emptyNoticeId: 'prodEmptyNotice',
+        countNoticeId: 'prodCountNotice'
     });
 });
 </script>

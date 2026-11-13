@@ -44,6 +44,31 @@ $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");
             
             <!-- Manage Packages Tab -->
             <div class="tab-pane active" id="manage">
+                <!-- Search & Filter Toolbar -->
+                <div class="bg-white border border-slate-200 rounded-xl p-3.5 mb-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div class="relative flex-1 min-w-[200px]">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="pkgSearchInput" placeholder="Live search packages by name, currency, ID..." 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="pkgFilterSelect" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:border-indigo-500 transition-all cursor-pointer">
+                            <option value="all">All Packages</option>
+                            <option value="active">Active Only</option>
+                            <option value="inactive">Inactive Only</option>
+                        </select>
+                        <span id="pkgCountNotice" class="text-xs text-slate-500 font-semibold whitespace-nowrap px-2">
+                            <?php echo count($packages); ?> packages
+                        </span>
+                    </div>
+                </div>
+
+                <div id="pkgEmptyNotice" class="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm hidden">
+                    <i class="fa-solid fa-box-open text-4xl text-slate-400 mb-3"></i>
+                    <h3 class="text-lg font-bold text-slate-700 mb-1">No Matching Packages</h3>
+                    <p class="text-sm text-slate-500">No packages match your search or filter selection.</p>
+                </div>
+
                 <?php if (count($packages) === 0): ?>
                     <div class="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
                         <i class="fa-solid fa-box-open text-4xl text-slate-400 mb-3"></i>
@@ -51,7 +76,7 @@ $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");
                         <p class="text-sm text-slate-500">You haven't created any MLM packages yet. Go to the Create Package tab to get started.</p>
                     </div>
                 <?php else: ?>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div id="pkgCardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <?php foreach($packages as $pkg): 
                             $id = $pkg['id'];
                             $pname = $pkg['name'];
@@ -64,7 +89,9 @@ $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");
                             $bin_pct = $pkg['binary_percent'] ?? 0;
                             $spon_pct = $pkg['sponsor_percent'] ?? 0;
                         ?>
-                            <div class="bg-white border <?php echo $active ? 'border-indigo-200' : 'border-slate-200'; ?> rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative">
+                            <div class="pkg-card bg-white border <?php echo $active ? 'border-indigo-200' : 'border-slate-200'; ?> rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative"
+                                 data-search-text="<?php echo htmlspecialchars(strtolower($pname . ' ' . $cur . ' ' . $total . ' id:' . $id)); ?>"
+                                 data-status="<?php echo $active ? 'active' : 'inactive'; ?>">
                                 <?php if($active): ?>
                                     <div class="absolute top-0 right-0 w-16 h-16 overflow-hidden">
                                         <div class="absolute transform rotate-45 bg-emerald-500 text-white text-[10px] font-bold py-1 right-[-35px] top-[15px] w-[120px] text-center shadow-sm">ACTIVE</div>
@@ -292,6 +319,14 @@ document.addEventListener("DOMContentLoaded", function() {
             const targetPane = document.querySelector(targetId);
             if (targetPane) targetPane.classList.add("active");
         });
+    });
+
+    initClientFilter({
+        searchInputId: 'pkgSearchInput',
+        filterSelectId: 'pkgFilterSelect',
+        rowSelector: '.pkg-card',
+        emptyNoticeId: 'pkgEmptyNotice',
+        countNoticeId: 'pkgCountNotice'
     });
 });
 </script>

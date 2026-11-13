@@ -68,13 +68,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_withdraw'])) 
 ?>
 
 <?php
-// --- Payout Requests Pagination ---
+// --- Payout Requests Search, Filter, Sort & Pagination ---
+$req_search = trim($_GET['req_search'] ?? '');
+$req_filter = $_GET['req_filter'] ?? 'all';
+$req_sort   = $_GET['req_sort'] ?? 'id';
+$req_order  = strtolower($_GET['req_order'] ?? 'desc');
+if (!in_array($req_order, ['asc', 'desc'])) $req_order = 'desc';
+
+$req_sort_columns = [
+    'id'             => 'id',
+    'createdtime'    => 'createdtime',
+    'payment_amount' => 'payment_amount',
+    'payment_status' => 'payment_status',
+];
+$req_sort_sql = $req_sort_columns[$req_sort] ?? 'id';
+
+$req_where = ["userid = ?"];
+$req_params = [$userId];
+
+if ($req_search !== '') {
+    $req_where[] = "(payment_amount LIKE ? OR createdtime LIKE ? OR id = ?)";
+    $like = '%' . $req_search . '%';
+    $req_params[] = $like;
+    $req_params[] = $like;
+    $req_params[] = is_numeric($req_search) ? (int)$req_search : 0;
+}
+if ($req_filter === 'paid') {
+    $req_where[] = "payment_status = 1";
+} elseif ($req_filter === 'pending') {
+    $req_where[] = "payment_status = 0";
+} elseif ($req_filter === 'rejected') {
+    $req_where[] = "payment_status = 2";
+}
+$req_where_sql = implode(' AND ', $req_where);
+
 $req_per_page = 10;
 $req_page = max(1, (int)($_GET['req_page'] ?? 1));
-$total_reqs = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM payments WHERE userid = ?", [$userId]);
+$total_reqs = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM payments WHERE $req_where_sql", $req_params);
 $req_total_pages = max(1, (int)ceil($total_reqs / $req_per_page));
 if ($req_page > $req_total_pages) $req_page = $req_total_pages;
 $req_offset = ($req_page - 1) * $req_per_page;
+
+function build_withdraw_query($override = []) {
+    global $req_search, $req_filter, $req_sort, $req_order, $req_page;
+    $p = [
+        'req_search' => $req_search,
+        'req_filter' => $req_filter,
+        'req_sort'   => $req_sort,
+        'req_order'  => $req_order,
+        'req_page'   => $req_page
+    ];
+    $merged = array_merge($p, $override);
+    if (empty($merged['req_search'])) unset($merged['req_search']);
+    if ($merged['req_filter'] === 'all') unset($merged['req_filter']);
+    if ($merged['req_sort'] === 'id') unset($merged['req_sort']);
+    if ($merged['req_order'] === 'desc') unset($merged['req_order']);
+    return http_build_query($merged);
+}
+
+function sort_th_withdraw($key, $label, $cur_sort, $cur_order, $align = 'left') {
+    $is_active = ($cur_sort === $key);
+    $next_order = ($is_active && $cur_order === 'asc') ? 'desc' : 'asc';
+    $icon = '<i class="fa-solid fa-sort text-slate-300 ml-1 text-[11px]"></i>';
+    if ($is_active) {
+        $icon = ($cur_order === 'asc') 
+            ? '<i class="fa-solid fa-sort-up text-indigo-600 ml-1 text-[11px]"></i>' 
+            : '<i class="fa-solid fa-sort-down text-indigo-600 ml-1 text-[11px]"></i>';
+    }
+    $align_cls = $align === 'right' ? 'text-right' : ($align === 'center' ? 'text-center' : 'text-left');
+    $q = build_withdraw_query(['req_sort' => $key, 'req_order' => $next_order, 'req_page' => 1]);
+    return "<th class=\"px-5 py-3 font-semibold {$align_cls}\">
+        <a href=\"?{$q}\" class=\"inline-flex items-center hover:text-indigo-600 transition-colors\">
+            <span>{$label}</span> {$icon}
+        </a>
+    </th>";
+}
 ?>
 
 <div>
@@ -128,26 +196,53 @@ $req_offset = ($req_page - 1) * $req_per_page;
         </div>
         
         <div class="bg-white border border-slate-200 shadow-sm rounded-2xl shadow-xl flex flex-col">
-            <div class="px-5 py-4 border-b border-slate-200 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-600 flex items-center justify-center">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
+            <div class="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-600 flex items-center justify-center">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900">Recent Payout Requests</h3>
                 </div>
-                <h3 class="text-sm font-bold text-slate-900">Recent Payout Requests</h3>
+                
+                <!-- Search & Filter Controls -->
+                <form id="withdrawSearchForm" method="GET" class="flex items-center gap-2 flex-wrap">
+                    <input type="hidden" name="req_sort" value="<?php echo htmlspecialchars($req_sort); ?>">
+                    <input type="hidden" name="req_order" value="<?php echo htmlspecialchars($req_order); ?>">
+                    <input type="hidden" name="req_page" value="1">
+                    
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="withdrawSearchInput" name="req_search" value="<?php echo htmlspecialchars($req_search); ?>" placeholder="Search amt, date..."
+                               class="bg-white border border-slate-200 rounded-lg pl-7 pr-6 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all w-36 sm:w-44">
+                        <?php if (!empty($req_search)): ?>
+                            <a href="?<?php echo build_withdraw_query(['req_search' => '', 'req_page' => 1]); ?>" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Clear">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+
+                    <select name="req_filter" onchange="document.getElementById('withdrawSearchForm').submit()" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 font-medium focus:outline-none focus:border-indigo-500 cursor-pointer">
+                        <option value="all" <?php echo $req_filter === 'all' ? 'selected' : ''; ?>>All</option>
+                        <option value="paid" <?php echo $req_filter === 'paid' ? 'selected' : ''; ?>>Paid</option>
+                        <option value="pending" <?php echo $req_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="rejected" <?php echo $req_filter === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
+                    </select>
+                </form>
             </div>
             <div class="p-0 overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-600 border-b border-slate-200">
                             <th class="px-5 py-3 font-semibold">#</th>
-                            <th class="px-5 py-3 font-semibold">Date</th>
-                            <th class="px-5 py-3 font-semibold">Amount</th>
-                            <th class="px-5 py-3 font-semibold">Status</th>
+                            <?php echo sort_th_withdraw('createdtime', 'Date', $req_sort, $req_order); ?>
+                            <?php echo sort_th_withdraw('payment_amount', 'Amount', $req_sort, $req_order); ?>
+                            <?php echo sort_th_withdraw('payment_status', 'Status', $req_sort, $req_order); ?>
                         </tr>
                     </thead>
                     <tbody class="text-sm text-slate-700 divide-y divide-white/5">
                         <?php 
-                        $stmtReq = $pdo->prepare("SELECT payment_amount, payment_status, createdtime FROM payments WHERE userid = ? ORDER BY id DESC LIMIT $req_per_page OFFSET $req_offset");
-                        $stmtReq->execute([$userId]);
+                        $stmtReq = $pdo->prepare("SELECT id, payment_amount, payment_status, createdtime FROM payments WHERE $req_where_sql ORDER BY $req_sort_sql $req_order LIMIT $req_per_page OFFSET $req_offset");
+                        $stmtReq->execute($req_params);
                         $requests = $stmtReq->fetchAll();
                         
                         if(count($requests) > 0) {
@@ -164,13 +259,13 @@ $req_offset = ($req_page - 1) * $req_per_page;
                                 }
                                 echo "<tr class='hover:bg-slate-50 transition-colors'>
                                     <td class='px-5 py-3 text-slate-500 text-xs'>$row_num</td>
-                                    <td class='px-5 py-3 text-slate-600'>$date</td>
-                                    <td class='px-5 py-3 font-semibold text-slate-800'>₹ $amt</td>
-                                    <td class='px-5 py-3'>$status</td>
+                                    <td class='px-5 py-3 text-slate-600 whitespace-nowrap'>$date</td>
+                                    <td class='px-5 py-3 font-semibold text-slate-800 whitespace-nowrap'>₹ $amt</td>
+                                    <td class='px-5 py-3 whitespace-nowrap'>$status</td>
                                 </tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='4' class='px-5 py-8 text-center text-slate-600'>No withdrawal requests yet.</td></tr>";
+                            echo "<tr><td colspan='4' class='px-5 py-8 text-center text-slate-500 text-xs font-medium'>No payout requests found matching criteria.</td></tr>";
                         }
                         ?>
                     </tbody>
@@ -178,27 +273,25 @@ $req_offset = ($req_page - 1) * $req_per_page;
 
                 <!-- Pagination for Payout Requests -->
                 <?php if ($req_total_pages > 1): ?>
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 border-t border-slate-100">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 border-t border-slate-100 bg-slate-50">
                     <div class="text-xs text-slate-500 font-medium">
                         Page <strong class="text-slate-700"><?php echo $req_page; ?></strong> of <strong class="text-slate-700"><?php echo $req_total_pages; ?></strong> &mdash; <?php echo $total_reqs; ?> total requests
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <?php
-                        $base_url = '?req_page=';
-                        if ($req_page > 1): ?>
-                            <a href="<?php echo $base_url . ($req_page - 1); ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all">
-                                <i class="fa-solid fa-chevron-left"></i> Prev
+                    <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                        <?php if ($req_page > 1): ?>
+                            <a href="?<?php echo build_withdraw_query(['req_page' => $req_page - 1]); ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm">
+                                <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
                             </a>
                         <?php endif;
                         $range = 2;
                         $rs = max(1, $req_page - $range);
                         $re = min($req_total_pages, $req_page + $range);
                         for ($p = $rs; $p <= $re; $p++): ?>
-                            <a href="<?php echo $base_url . $p; ?>" class="px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all <?php echo ($p === $req_page) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700'; ?>"><?php echo $p; ?></a>
+                            <a href="?<?php echo build_withdraw_query(['req_page' => $p]); ?>" class="px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all shadow-sm <?php echo ($p === $req_page) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700'; ?>"><?php echo $p; ?></a>
                         <?php endfor;
                         if ($req_page < $req_total_pages): ?>
-                            <a href="<?php echo $base_url . ($req_page + 1); ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all">
-                                Next <i class="fa-solid fa-chevron-right"></i>
+                            <a href="?<?php echo build_withdraw_query(['req_page' => $req_page + 1]); ?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all shadow-sm">
+                                Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
                             </a>
                         <?php endif; ?>
                     </div>
@@ -208,5 +301,11 @@ $req_offset = ($req_page - 1) * $req_per_page;
     </div>
 </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    initTableSearchDebounce('withdrawSearchInput', 'withdrawSearchForm', 450);
+});
+</script>
 
 <?php include("layout_footer.php"); ?>

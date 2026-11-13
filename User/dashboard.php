@@ -420,8 +420,8 @@ if ($acti != 1) {
       <div class="mt-5">
         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-[0.8px] mb-2">Your Referral Link</label>
         <div class="flex">
-          <input type="text" id="refUrl" value="<?php echo $invite_url; ?>" readonly class="flex-1 bg-white border border-slate-200 border-r-0 rounded-l-lg text-slate-800 px-3.5 py-2.5 text-[12.5px] font-['Inter'] outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all">
-          <button class="bg-gradient-to-br from-purple-500 to-indigo-600 text-white border-none rounded-r-lg px-4.5 py-2.5 text-xs font-semibold cursor-pointer hover:opacity-90 transition-opacity" onclick="copyRefUrl()">
+          <input type="text" id="refUrl" value="<?php echo $invite_url; ?>" readonly class="flex-1 min-w-0 bg-white border border-slate-200 border-r-0 rounded-l-lg text-slate-800 px-3.5 py-2.5 text-[12.5px] font-['Inter'] outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all">
+          <button class="shrink-0 bg-gradient-to-br from-purple-500 to-indigo-600 text-white border-none rounded-r-lg px-4.5 py-2.5 text-xs font-semibold cursor-pointer hover:opacity-90 transition-opacity" onclick="copyRefUrl()">
             <i class="fa-solid fa-copy"></i> Copy
           </button>
         </div>

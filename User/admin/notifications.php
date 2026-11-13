@@ -44,6 +44,24 @@ $notifications = mlmp_pdo_fetch_all($pdo, "SELECT * FROM notifications ORDER BY 
             
             <!-- Manage Notifications Tab -->
             <div class="tab-pane active" id="manage">
+                <!-- Search & Counter Toolbar -->
+                <div class="bg-white border border-slate-200 rounded-xl p-3.5 mb-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div class="relative flex-1 min-w-[200px]">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="notiSearchInput" placeholder="Live search announcements by subject, content..." 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all">
+                    </div>
+                    <span id="notiCountNotice" class="text-xs text-slate-500 font-semibold whitespace-nowrap px-2 self-end sm:self-center">
+                        <?php echo count($notifications); ?> announcement<?php echo count($notifications) !== 1 ? 's' : ''; ?>
+                    </span>
+                </div>
+
+                <div id="notiEmptyNotice" class="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm hidden">
+                    <i class="fa-solid fa-bell-slash text-4xl text-slate-400 mb-3"></i>
+                    <h3 class="text-lg font-bold text-slate-700 mb-1">No Matching Announcements</h3>
+                    <p class="text-sm text-slate-500">No notifications match your search query.</p>
+                </div>
+
                 <?php if (count($notifications) === 0): ?>
                     <div class="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
                         <i class="fa-solid fa-bell-slash text-4xl text-slate-400 mb-3"></i>
@@ -59,7 +77,8 @@ $notifications = mlmp_pdo_fetch_all($pdo, "SELECT * FROM notifications ORDER BY 
                             $date = $noti['posteddate'];
                             $valid = $noti['valid'];
                         ?>
-                            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative">
+                            <div class="noti-card bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden relative"
+                                 data-search-text="<?php echo htmlspecialchars(strtolower($subject . ' ' . $body . ' #' . $id)); ?>">
                                 
                                 <div class="p-5 border-b border-slate-100 flex-1 flex flex-col">
                                     <div class="flex items-start gap-3 mb-4 pr-6">
@@ -184,6 +203,13 @@ document.addEventListener("DOMContentLoaded", function() {
             const targetPane = document.querySelector(targetId);
             if (targetPane) targetPane.classList.add("active");
         });
+    });
+
+    initClientFilter({
+        searchInputId: 'notiSearchInput',
+        rowSelector: '.noti-card',
+        emptyNoticeId: 'notiEmptyNotice',
+        countNoticeId: 'notiCountNotice'
     });
 });
 </script>

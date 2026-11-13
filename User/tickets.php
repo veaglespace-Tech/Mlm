@@ -48,28 +48,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
     }
 }
 
-// Fetch user's tickets
+// Fetch user's tickets with search, filtering, sorting and pagination
 $status_filter = $_GET['status'] ?? 'all';
-$where_clause = "WHERE user_id = ?";
+$search        = trim($_GET['search'] ?? '');
+$sort          = $_GET['sort'] ?? 'updated_at';
+$order         = strtoupper($_GET['order'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
+
+// Whitelist sort columns
+$sort_cols = [
+    'id'         => 't.id',
+    'subject'    => 't.subject',
+    'category'   => 't.category',
+    'priority'   => 't.priority',
+    'status'     => 't.status',
+    'created_at' => 't.created_at',
+    'updated_at' => 't.updated_at'
+];
+$sort_col = $sort_cols[$sort] ?? 't.updated_at';
+
+$where_clauses = ["t.user_id = ?"];
 $params = [$user_id];
 if ($status_filter !== 'all') {
-    $where_clause .= " AND status = ?";
-    $params[] = $status_filter;
+    if ($status_filter === 'resolved') {
+        $where_clauses[] = "t.status IN ('resolved', 'closed')";
+    } else {
+        $where_clauses[] = "t.status = ?";
+        $params[] = $status_filter;
+    }
 }
+if ($search !== '') {
+    $where_clauses[] = "(t.subject LIKE ? OR t.category LIKE ? OR CAST(t.id AS CHAR) LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+
+$where_sql = "WHERE " . implode(" AND ", $where_clauses);
+
+// Pagination
+$count_sql = "SELECT COUNT(*) FROM support_tickets t $where_sql";
+$total_rows = mlmp_pdo_count($pdo, $count_sql, $params);
+$per_page = 10;
+$total_pages = max(1, ceil($total_rows / $per_page));
+$page = max(1, min((int)($_GET['page'] ?? 1), $total_pages));
+$offset = ($page - 1) * $per_page;
 
 $tickets = mlmp_pdo_fetch_all($pdo, "
     SELECT t.*, 
            (SELECT COUNT(*) FROM ticket_replies WHERE ticket_id = t.id) AS reply_count,
            (SELECT MAX(created_at) FROM ticket_replies WHERE ticket_id = t.id AND sender_type = 'admin') AS last_admin_reply
     FROM support_tickets t 
-    $where_clause 
-    ORDER BY t.updated_at DESC
+    $where_sql 
+    ORDER BY $sort_col $order
+    LIMIT $per_page OFFSET $offset
 ", $params);
+
+function build_ticket_query($overrides = []) {
+    $params = array_merge([
+        'status' => $_GET['status'] ?? 'all',
+        'search' => $_GET['search'] ?? '',
+        'sort'   => $_GET['sort'] ?? 'updated_at',
+        'order'  => $_GET['order'] ?? 'desc',
+        'page'   => 1
+    ], $overrides);
+    return '?' . http_build_query(array_filter($params, fn($v) => $v !== '' && $v !== null));
+}
+
+function sort_th_tickets($col, $label) {
+    $current_sort  = $_GET['sort'] ?? 'updated_at';
+    $current_order = strtolower($_GET['order'] ?? 'desc');
+    $next_order    = ($current_sort === $col && $current_order === 'asc') ? 'desc' : 'asc';
+    $is_active     = ($current_sort === $col);
+    $icon = 'fa-sort text-slate-300';
+    if ($is_active) {
+        $icon = ($current_order === 'asc') ? 'fa-sort-up text-indigo-600' : 'fa-sort-down text-indigo-600';
+    }
+    $url = build_ticket_query(['sort' => $col, 'order' => $next_order, 'page' => 1]);
+    $active_cls = $is_active ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
+    return "<a href='{$url}' class='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors {$active_cls}'>{$label} <i class='fa-solid {$icon} text-[10px]'></i></a>";
+}
 
 // Counts
 $open_count = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM support_tickets WHERE user_id = ? AND status = 'open'", [$user_id]);
 $progress_count = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM support_tickets WHERE user_id = ? AND status = 'in_progress'", [$user_id]);
 $resolved_count = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM support_tickets WHERE user_id = ? AND status IN ('resolved','closed')", [$user_id]);
+$all_tickets_count = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM support_tickets WHERE user_id = ?", [$user_id]);
 
 function ticket_status_badge($status) {
     $map = [
@@ -125,10 +188,10 @@ function ticket_priority_badge($priority) {
     </div>
     <div class="text-[11px] text-slate-500 font-medium">Resolved</div>
   </div>
-  <a href="?status=all" class="bg-white rounded-xl border border-slate-200 p-4 hover:bg-slate-50 transition-colors">
+  <a href="<?php echo build_ticket_query(['status' => 'all', 'page' => 1]); ?>" class="bg-white rounded-xl border border-slate-200 p-4 hover:bg-slate-50 transition-colors">
     <div class="flex items-center gap-2 mb-1">
       <div class="w-7 h-7 bg-purple-50 rounded-lg flex items-center justify-center"><i class="fa-solid fa-list text-purple-500 text-xs"></i></div>
-      <span class="text-xl font-bold text-slate-900"><?php echo count($tickets); ?></span>
+      <span class="text-xl font-bold text-slate-900"><?php echo $all_tickets_count; ?></span>
     </div>
     <div class="text-[11px] text-slate-500 font-medium">All Tickets</div>
   </a>
@@ -191,24 +254,54 @@ function ticket_priority_badge($priority) {
   <!-- Tickets List -->
   <div class="fade-in delay-3 xl:col-span-2">
     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+      <!-- Header with Tabs -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center">
             <i class="fa-solid fa-ticket text-indigo-500"></i>
           </div>
-          <h3 class="text-[15px] font-bold text-slate-900">My Tickets</h3>
+          <div>
+            <h3 class="text-[15px] font-bold text-slate-900 leading-tight">My Tickets</h3>
+            <span class="text-[11px] text-slate-400 font-medium"><?php echo $total_rows; ?> total matching</span>
+          </div>
         </div>
-        <div class="flex gap-1.5">
+        <div class="flex gap-1.5 flex-wrap">
           <?php 
           $filters = ['all' => 'All', 'open' => 'Open', 'in_progress' => 'Active', 'resolved' => 'Resolved'];
           foreach ($filters as $key => $label): 
           ?>
-          <a href="?status=<?php echo $key; ?>" 
+          <a href="<?php echo build_ticket_query(['status' => $key, 'page' => 1]); ?>" 
              class="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors
              <?php echo ($status_filter === $key) ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'; ?>">
             <?php echo $label; ?>
           </a>
           <?php endforeach; ?>
+        </div>
+      </div>
+
+      <!-- Search & Sort Controls Toolbar -->
+      <div class="px-6 py-3.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+        <!-- Debounced Live Search Form -->
+        <form method="GET" action="tickets.php" id="userTicketSearchForm" class="flex-1 min-w-[200px]">
+          <input type="hidden" name="status" value="<?php echo htmlspecialchars($status_filter); ?>">
+          <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
+          <input type="hidden" name="order" value="<?php echo htmlspecialchars($order); ?>">
+          <div class="relative">
+            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+            <input type="text" id="userTicketSearchInput" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search ticket #, subject, category..." class="w-full pl-8 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm">
+            <?php if ($search !== ''): ?>
+              <a href="<?php echo build_ticket_query(['search' => '', 'page' => 1]); ?>" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Clear search"><i class="fa-solid fa-times-circle"></i></a>
+            <?php endif; ?>
+          </div>
+        </form>
+
+        <!-- Sorting Pills -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-[11px] text-slate-400 font-semibold mr-1">Sort:</span>
+          <?php echo sort_th_tickets('updated_at', 'Date'); ?>
+          <?php echo sort_th_tickets('priority', 'Priority'); ?>
+          <?php echo sort_th_tickets('subject', 'Subject'); ?>
+          <?php echo sort_th_tickets('status', 'Status'); ?>
         </div>
       </div>
 
@@ -219,7 +312,10 @@ function ticket_priority_badge($priority) {
             <i class="fa-solid fa-inbox text-2xl text-slate-300"></i>
           </div>
           <p class="text-sm font-medium text-slate-500">No tickets found</p>
-          <p class="text-xs text-slate-400 mt-1">Create a new ticket to get started</p>
+          <p class="text-xs text-slate-400 mt-1"><?php echo $search !== '' ? 'Try adjusting your search or filters.' : 'Create a new ticket to get started'; ?></p>
+          <?php if ($search !== '' || $status_filter !== 'all'): ?>
+            <a href="tickets.php" class="inline-block mt-3 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-semibold hover:bg-indigo-100 transition-colors">Reset Filters</a>
+          <?php endif; ?>
         </div>
         <?php else: ?>
         <?php foreach ($tickets as $ticket): ?>
@@ -234,7 +330,7 @@ function ticket_priority_badge($priority) {
               <?php echo ticket_status_badge($ticket['status']); ?>
               <?php echo ticket_priority_badge($ticket['priority']); ?>
             </div>
-            <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+            <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-400 flex-wrap">
               <span><i class="fa-solid fa-tag mr-1"></i><?php echo ucfirst($ticket['category']); ?></span>
               <span><i class="fa-solid fa-message mr-1"></i><?php echo (int)$ticket['reply_count']; ?> replies</span>
               <span><i class="fa-solid fa-clock mr-1"></i><?php echo date('d M Y, h:i A', strtotime($ticket['created_at'])); ?></span>
@@ -248,8 +344,35 @@ function ticket_priority_badge($priority) {
         <?php endforeach; ?>
         <?php endif; ?>
       </div>
+
+      <!-- Pagination -->
+      <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+        <div class="text-xs text-slate-500">
+          Showing <span class="font-bold text-slate-800"><?php echo $total_rows > 0 ? $offset + 1 : 0; ?></span> to <span class="font-bold text-slate-800"><?php echo min($total_rows, $offset + $per_page); ?></span> of <span class="font-bold text-slate-800"><?php echo $total_rows; ?></span> tickets
+        </div>
+        <?php if ($total_pages > 1): ?>
+        <div class="flex items-center gap-1">
+          <?php if ($page > 1): ?>
+            <a href="<?php echo build_ticket_query(['page' => $page - 1]); ?>" class="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-chevron-left"></i> Prev</a>
+          <?php endif; ?>
+          <?php for ($p = max(1, $page - 2); $p <= min($total_pages, $page + 2); $p++): ?>
+            <a href="<?php echo build_ticket_query(['page' => $p]); ?>" class="px-2.5 py-1 text-xs rounded-lg font-semibold <?php echo ($p === $page) ? 'bg-indigo-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'; ?>"><?php echo $p; ?></a>
+          <?php endfor; ?>
+          <?php if ($page < $total_pages): ?>
+            <a href="<?php echo build_ticket_query(['page' => $page + 1]); ?>" class="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Next <i class="fa-solid fa-chevron-right"></i></a>
+          <?php endif; ?>
+        </div>
+        <?php endif; ?>
+      </div>
+
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initTableSearchDebounce('userTicketSearchInput', 'userTicketSearchForm', 400);
+});
+</script>
 
 <?php include("layout_footer.php"); ?>

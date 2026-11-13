@@ -53,23 +53,92 @@ $pending_count  = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM kyc_documents WHERE
 $approved_count = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM kyc_documents WHERE status = 'approved'");
 $rejected_count = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM kyc_documents WHERE status = 'rejected'");
 
-// Filter
+// Filter, Search, Sorting inputs
 $status_filter = $_GET['status'] ?? 'pending';
-$where_clause = "1=1";
+$search = trim($_GET['search'] ?? '');
+$sort = $_GET['sort'] ?? '';
+$order = strtolower($_GET['order'] ?? 'desc');
+if (!in_array($order, ['asc', 'desc'])) $order = 'desc';
+
+$sort_columns = [
+    'username'     => 'k.username',
+    'full_name'    => 'k.full_name',
+    'submitted_at' => 'k.submitted_at',
+    'status'       => 'k.status',
+    'id'           => 'k.id',
+];
+$sort_sql = isset($sort_columns[$sort]) ? ($sort_columns[$sort] . ' ' . $order) : "(k.status = 'pending') DESC, k.submitted_at DESC";
+
+$where_clauses = ["1=1"];
 $params = [];
+
 if ($status_filter !== 'all') {
-    $where_clause .= " AND k.status = ?";
+    $where_clauses[] = "k.status = ?";
     $params[] = $status_filter;
 }
+
+if ($search !== '') {
+    $where_clauses[] = "(k.username LIKE ? OR k.full_name LIKE ? OR k.aadhar_number LIKE ? OR k.pan_number LIKE ? OR u.email LIKE ? OR u.mobile LIKE ?)";
+    $like = '%' . $search . '%';
+    $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
+}
+
+$where_sql = implode(' AND ', $where_clauses);
+
+// Pagination
+$per_page = 15;
+$current_page = max(1, (int)($_GET['page'] ?? 1));
+$total_filtered = mlmp_pdo_count($pdo, "
+    SELECT COUNT(*) 
+    FROM kyc_documents k 
+    LEFT JOIN affiliateuser u ON k.user_id = u.Id 
+    WHERE $where_sql
+", $params);
+$total_pages = max(1, (int)ceil($total_filtered / $per_page));
+if ($current_page > $total_pages) $current_page = $total_pages;
+$offset = ($current_page - 1) * $per_page;
 
 // Fetch Records with User Details
 $records = mlmp_pdo_fetch_all($pdo, "
     SELECT k.*, u.email, u.mobile, u.fname as registered_name
     FROM kyc_documents k
     LEFT JOIN affiliateuser u ON k.user_id = u.Id
-    WHERE $where_clause
-    ORDER BY (k.status = 'pending') DESC, k.submitted_at DESC
+    WHERE $where_sql
+    ORDER BY $sort_sql
+    LIMIT $per_page OFFSET $offset
 ", $params);
+
+function sort_th_kyc($key, $label, $cur_sort, $cur_order, $align = 'left') {
+    $is_active = ($cur_sort === $key);
+    $next_order = ($is_active && $cur_order === 'asc') ? 'desc' : 'asc';
+    $icon = '<i class="fa-solid fa-sort text-slate-300 ml-1 text-[11px]"></i>';
+    if ($is_active) {
+        $icon = ($cur_order === 'asc') 
+            ? '<i class="fa-solid fa-sort-up text-indigo-600 ml-1 text-[11px]"></i>' 
+            : '<i class="fa-solid fa-sort-down text-indigo-600 ml-1 text-[11px]"></i>';
+    }
+    $align_cls = $align === 'right' ? 'text-right' : ($align === 'center' ? 'text-center' : 'text-left');
+    return "<th class=\"py-3.5 px-4 font-semibold {$align_cls} cursor-pointer select-none hover:text-indigo-600 transition-colors\" onclick=\"applyTableSort('{$key}', '{$next_order}')\">
+        <span>{$label}</span> {$icon}
+    </th>";
+}
+
+function build_kyc_query($override = []) {
+    global $status_filter, $search, $sort, $order, $current_page;
+    $p = [
+        'status' => $status_filter,
+        'search' => $search,
+        'sort'   => $sort,
+        'order'  => $order,
+        'page'   => $current_page
+    ];
+    $merged = array_merge($p, $override);
+    if ($merged['status'] === 'pending') unset($merged['status']);
+    if (empty($merged['search'])) unset($merged['search']);
+    if (empty($merged['sort'])) unset($merged['sort']);
+    if ($merged['order'] === 'desc') unset($merged['order']);
+    return http_build_query($merged);
+}
 ?>
 
 <div class="dash-content space-y-6">
@@ -138,22 +207,43 @@ $records = mlmp_pdo_fetch_all($pdo, "
 
   <!-- Records Table -->
   <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <!-- Filters Header -->
-    <div class="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-2">
-        <a href="?status=pending" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'pending' ? 'bg-amber-100 text-amber-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
+    <!-- Filters Header with Debounced Search -->
+    <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+        <a href="?<?php echo build_kyc_query(['status' => 'pending', 'page' => 1]); ?>" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'pending' ? 'bg-amber-100 text-amber-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
           Pending (<?php echo $pending_count; ?>)
         </a>
-        <a href="?status=approved" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'approved' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
+        <a href="?<?php echo build_kyc_query(['status' => 'approved', 'page' => 1]); ?>" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'approved' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
           Approved (<?php echo $approved_count; ?>)
         </a>
-        <a href="?status=rejected" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'rejected' ? 'bg-red-100 text-red-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
+        <a href="?<?php echo build_kyc_query(['status' => 'rejected', 'page' => 1]); ?>" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'rejected' ? 'bg-red-100 text-red-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
           Rejected (<?php echo $rejected_count; ?>)
         </a>
-        <a href="?status=all" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'all' ? 'bg-indigo-100 text-indigo-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
+        <a href="?<?php echo build_kyc_query(['status' => 'all', 'page' => 1]); ?>" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all <?php echo $status_filter === 'all' ? 'bg-indigo-100 text-indigo-800 font-bold' : 'text-slate-600 hover:bg-slate-100'; ?>">
           All (<?php echo $total_count; ?>)
         </a>
       </div>
+
+      <!-- Debounced Search Box -->
+      <form id="kycSearchForm" method="GET" class="flex items-center gap-2">
+        <input type="hidden" name="status" value="<?php echo htmlspecialchars($status_filter); ?>">
+        <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
+        <input type="hidden" name="order" value="<?php echo htmlspecialchars($order); ?>">
+        <input type="hidden" name="page" value="1">
+        <div class="relative w-full md:w-64">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" id="kycSearchInput" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search name, user, Aadhaar, PAN..." 
+                 class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all">
+          <?php if (!empty($search)): ?>
+            <a href="?<?php echo build_kyc_query(['search' => '', 'page' => 1]); ?>" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs p-1" title="Clear Search">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </a>
+          <?php endif; ?>
+        </div>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-sm">
+          Search
+        </button>
+      </form>
     </div>
 
     <!-- Table -->
@@ -161,11 +251,11 @@ $records = mlmp_pdo_fetch_all($pdo, "
       <table class="w-full text-left border-collapse text-sm">
         <thead>
           <tr class="bg-slate-50/75 border-b border-slate-100 text-slate-500 font-semibold text-xs uppercase tracking-wider">
-            <th class="py-3.5 px-4">User</th>
-            <th class="py-3.5 px-4">Aadhaar & PAN</th>
+            <?php echo sort_th_kyc('full_name', 'User', $sort, $order); ?>
+            <th class="py-3.5 px-4">Aadhaar &amp; PAN</th>
             <th class="py-3.5 px-4">Attached Documents</th>
-            <th class="py-3.5 px-4">Submitted Date</th>
-            <th class="py-3.5 px-4">Status</th>
+            <?php echo sort_th_kyc('submitted_at', 'Submitted Date', $sort, $order); ?>
+            <?php echo sort_th_kyc('status', 'Status', $sort, $order, 'center'); ?>
             <th class="py-3.5 px-4 text-right">Actions</th>
           </tr>
         </thead>
@@ -284,6 +374,49 @@ $records = mlmp_pdo_fetch_all($pdo, "
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination Controls -->
+    <?php if ($total_pages > 1): ?>
+    <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div class="text-slate-500 font-medium">
+        Showing page <strong class="text-slate-800"><?php echo $current_page; ?></strong> of <strong class="text-slate-800"><?php echo $total_pages; ?></strong> &mdash; records <strong class="text-slate-800"><?php echo ($offset + 1); ?></strong>-<strong><?php echo min($total_filtered, $offset + $per_page); ?></strong> of <strong><?php echo $total_filtered; ?></strong>
+      </div>
+      <div class="flex items-center gap-1 flex-wrap justify-center">
+        <?php if ($current_page > 1): ?>
+          <a href="?<?php echo build_kyc_query(['page' => $current_page - 1]); ?>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
+            <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
+          </a>
+        <?php endif; ?>
+
+        <?php
+        $range = 2;
+        $start = max(1, $current_page - $range);
+        $end   = min($total_pages, $current_page + $range);
+        if ($start > 1): ?>
+          <a href="?<?php echo build_kyc_query(['page' => 1]); ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">1</a>
+          <?php if ($start > 2): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+        <?php endif; ?>
+
+        <?php for ($p = $start; $p <= $end; $p++): ?>
+          <a href="?<?php echo build_kyc_query(['page' => $p]); ?>" 
+             class="px-2.5 py-1.5 rounded-lg border font-bold transition-all shadow-sm <?php echo ($p === $current_page) ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-200' : 'border-slate-200 bg-white text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600'; ?>">
+            <?php echo $p; ?>
+          </a>
+        <?php endfor; ?>
+
+        <?php if ($end < $total_pages): ?>
+          <?php if ($end < $total_pages - 1): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+          <a href="?<?php echo build_kyc_query(['page' => $total_pages]); ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"><?php echo $total_pages; ?></a>
+        <?php endif; ?>
+
+        <?php if ($current_page < $total_pages): ?>
+          <a href="?<?php echo build_kyc_query(['page' => $current_page + 1]); ?>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
+            Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+          </a>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -331,6 +464,10 @@ $records = mlmp_pdo_fetch_all($pdo, "
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", function() {
+  initTableSearchDebounce('kycSearchInput', 'kycSearchForm', 450);
+});
+
 function openRejectModal(id, username) {
   document.getElementById('reject_kyc_id').value = id;
   document.getElementById('reject_username_display').textContent = '@' + username;

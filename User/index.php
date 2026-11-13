@@ -23,9 +23,104 @@ if($main==1 || $main==3)
     exit;
 }
 
-$errormsg = "";
+function mask_email($email) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return htmlspecialchars((string)$email);
+    }
+    $parts = explode('@', $email);
+    $name = $parts[0];
+    $domain = $parts[1];
+    $len = strlen($name);
+    if ($len <= 2) {
+        $masked = substr($name, 0, 1) . '*';
+    } else {
+        $masked = substr($name, 0, 1) . str_repeat('*', min(5, $len - 2)) . substr($name, -1);
+    }
+    return htmlspecialchars($masked . '@' . $domain);
+}
 
-if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']))
+$errormsg = "";
+$successmsg = "";
+
+// 1. Cancel OTP and return to normal login
+if (isset($_GET['cancel_otp'])) {
+    unset($_SESSION['admin_otp_pending']);
+    header("Location: index.php");
+    exit;
+}
+
+// 2. Resend Admin OTP
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_admin_otp'])) {
+    if (isset($_SESSION['admin_otp_pending'])) {
+        $otp = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        $_SESSION['admin_otp_pending']['otp'] = $otp;
+        $_SESSION['admin_otp_pending']['expires_at'] = time() + 600;
+        $_SESSION['admin_otp_pending']['attempts'] = 0;
+
+        include_once("smtp_helper.php");
+        $admin_email = $_SESSION['admin_otp_pending']['email'];
+        $subject = "Your New Admin Login Verification Code: " . $otp;
+        $body = "
+        <div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;'>
+            <h2 style='color:#1e1b4b;margin-bottom:8px;'>Admin Two-Factor Authentication</h2>
+            <p style='color:#475569;font-size:14px;line-height:1.5;'>A new verification code was requested for your admin account: <b>" . htmlspecialchars($_SESSION['admin_otp_pending']['username']) . "</b>.</p>
+            <div style='background:#f1f5f9;border-radius:12px;padding:18px;text-align:center;margin:20px 0;'>
+                <div style='font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:700;'>Your New Verification Code</div>
+                <div style='font-size:34px;font-weight:800;letter-spacing:8px;color:#4f46e5;margin-top:6px;'>$otp</div>
+            </div>
+            <p style='color:#64748b;font-size:12px;line-height:1.4;'>Valid for 10 minutes. If you did not initiate this login, please secure your account immediately.</p>
+        </div>";
+        @mlmp_send_mail($admin_email, $subject, $body);
+
+        $successmsg = "
+        <div class='alert' style='background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3); color: #059669;'>
+            <strong>Code Sent:</strong> A fresh 6-digit verification code has been dispatched to your email.
+        </div>";
+    }
+}
+
+// 3. Verify Admin OTP
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_admin_otp'])) {
+    if (!isset($_SESSION['admin_otp_pending'])) {
+        $errormsg = "
+        <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+            <strong>Session Expired:</strong> Your verification session has expired. Please sign in again.
+        </div>";
+    } else {
+        $entered_otp = preg_replace('/\D/', '', $_POST['admin_otp'] ?? '');
+        $stored = $_SESSION['admin_otp_pending'];
+
+        if (time() > $stored['expires_at']) {
+            $errormsg = "
+            <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                <strong>Code Expired:</strong> The verification code has expired (10 min limit). Click 'Resend Code' below for a new code.
+            </div>";
+        } elseif ((int)$stored['attempts'] >= 5) {
+            unset($_SESSION['admin_otp_pending']);
+            $errormsg = "
+            <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                <strong>Too Many Failed Attempts:</strong> For security, this login attempt was cancelled. Please sign in again.
+            </div>";
+        } elseif ($entered_otp === $stored['otp']) {
+            // SUCCESSFUL ADMIN LOGIN
+            $adminUsername = $stored['username'];
+            unset($_SESSION['admin_otp_pending']);
+            $_SESSION['adminidusername'] = $adminUsername;
+            header("Location: admin/dashboard.php");
+            exit;
+        } else {
+            $_SESSION['admin_otp_pending']['attempts']++;
+            $remaining = 5 - (int)$_SESSION['admin_otp_pending']['attempts'];
+            $errormsg = "
+            <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                <strong>Invalid OTP:</strong> The code you entered does not match. Please try again ({$remaining} attempts remaining).
+            </div>";
+        }
+    }
+}
+
+// 4. Initial Login Attempt (Username / Email + Password)
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']) && !isset($_POST['verify_admin_otp']) && !isset($_POST['resend_admin_otp']))
 {
     $login_input = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -57,12 +152,35 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']))
                     mlmp_upgrade_password_hash($pdo, $userRow['username'], $password, $userRow['password']);
 
                     if ((int)$userRow['level'] === 1) {
-                        // Admin user login
-                        $_SESSION['adminidusername'] = $userRow['username'];
-                        header("Location: admin/dashboard.php");
-                        exit;
+                        // Admin user login: REQUIRE OTP VERIFICATION
+                        $otp = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+                        $_SESSION['admin_otp_pending'] = [
+                            'id'         => $userRow['Id'],
+                            'username'   => $userRow['username'],
+                            'email'      => $userRow['email'],
+                            'otp'        => $otp,
+                            'expires_at' => time() + 600, // 10 minutes
+                            'created_at' => time(),
+                            'attempts'   => 0
+                        ];
+
+                        include_once("smtp_helper.php");
+                        $subject = "Admin Login Verification Code: " . $otp;
+                        $body = "
+                        <div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;'>
+                            <h2 style='color:#1e1b4b;margin-bottom:8px;'>Admin Two-Factor Authentication</h2>
+                            <p style='color:#475569;font-size:14px;line-height:1.5;'>A login request to the administrative command center was initiated for account: <b>" . htmlspecialchars($userRow['username']) . "</b>.</p>
+                            <div style='background:#f1f5f9;border-radius:12px;padding:18px;text-align:center;margin:20px 0;'>
+                                <div style='font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:700;'>Your One-Time Password (OTP)</div>
+                                <div style='font-size:34px;font-weight:800;letter-spacing:8px;color:#4f46e5;margin-top:6px;'>$otp</div>
+                            </div>
+                            <p style='color:#64748b;font-size:12px;line-height:1.4;'>This code is valid for 10 minutes. If you did not initiate this login, please immediately review your security credentials.</p>
+                        </div>";
+                        @mlmp_send_mail($userRow['email'], $subject, $body);
+
+                        // Card will smoothly render the OTP form on the exact same card!
                     } else {
-                        // Member / affiliate user login
+                        // Member / affiliate user login: DIRECT TO DASHBOARD (no OTP)
                         $_SESSION['username'] = $userRow['username'];
                         header("Location: dashboard.php");
                         exit;
@@ -371,77 +489,147 @@ function googleTranslateElementInit() {
 
     <div class="max-w-md w-full mx-auto relative z-10">
       
-      <!-- Login Card Container -->
-      <div class="custom-card p-8 sm:p-10 rounded-2xl">
-        <!-- Welcome Header -->
-        <div class="mb-8">
-          <h2 class="text-2xl font-extrabold text-primary-custom tracking-tight mb-2">Welcome back!</h2>
-          <p class="text-secondary-custom text-sm">Please sign in to your affiliate account to continue.</p>
-        </div>
+      <?php 
+      $is_otp_step = isset($_SESSION['admin_otp_pending']) && !empty($_SESSION['admin_otp_pending']['username']);
+      $is_localhost = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false || strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false;
+      ?>
 
-        <!-- Error message alerts -->
-        <?php 
-        if($_SERVER['REQUEST_METHOD'] == 'POST' && ($errormsg!="")) {
-          print $errormsg;
-        }
-        ?>
-
-        <!-- Form Container -->
-        <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-6">
-          
-          <!-- Username or Email Input -->
-          <div class="space-y-2">
-            <label class="text-xs font-bold uppercase tracking-wider text-muted-custom" for="username">Username or Email</label>
-            <div class="relative">
-              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-muted-custom pointer-events-none transition-colors duration-200">
-                <i class="fa-solid fa-user text-xs"></i>
-              </span>
-              <input type="text" id="username" name="username" placeholder="Enter your username or email" minlength="3" required
-                     value="<?php echo htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                     autocomplete="username"
-                     class="custom-input w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none">
+      <!-- Login Card Container (Same card used for both login and admin OTP verification) -->
+      <div class="custom-card p-8 sm:p-10 rounded-2xl transition-all duration-300">
+        
+        <?php if ($is_otp_step): ?>
+          <!-- STEP 2: ADMIN TWO-FACTOR OTP CARD (ON THE EXACT SAME CARD) -->
+          <div class="mb-6 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 mx-auto mb-3 flex items-center justify-center text-2xl text-indigo-600 shadow-sm">
+              <i class="fa-solid fa-shield-halved"></i>
             </div>
+            <h2 class="text-2xl font-extrabold text-primary-custom tracking-tight mb-1.5">Admin Verification</h2>
+            <p class="text-secondary-custom text-xs leading-relaxed max-w-sm mx-auto">
+              Please enter the 6-digit verification code dispatched to:
+              <span class="font-bold text-primary-custom block mt-1"><?php echo mask_email($_SESSION['admin_otp_pending']['email']); ?></span>
+            </p>
           </div>
 
-          <!-- Password Input -->
-          <div class="space-y-2">
-            <div class="flex justify-between items-center">
-              <label class="text-xs font-bold uppercase tracking-wider text-muted-custom" for="password">Password</label>
-              <a href="forgotpassword.php" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600 dark:text-indigo-600 dark:hover:text-indigo-300 transition duration-150">Forgot password?</a>
-            </div>
-            <div class="relative">
-              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-muted-custom pointer-events-none transition-colors duration-200">
-                <i class="fa-solid fa-lock text-xs"></i>
+          <?php 
+          if (!empty($errormsg)) print $errormsg;
+          if (!empty($successmsg)) print $successmsg;
+          ?>
+
+          <?php if ($is_localhost && !empty($_SESSION['admin_otp_pending']['otp'])): ?>
+            <div class="mb-5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 text-xs flex items-center justify-between">
+              <span class="flex items-center gap-1.5 font-semibold text-amber-800">
+                <i class="fa-solid fa-key text-amber-600"></i> Dev Mode OTP:
               </span>
-              <input type="password" id="password" name="password" placeholder="Enter your password" minlength="4" required
-                     autocomplete="current-password"
-                     class="custom-input w-full rounded-xl py-3 pl-10 pr-10 text-sm outline-none">
-              <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-custom hover:text-indigo-500 transition-colors duration-200 focus:outline-none cursor-pointer">
-                <i class="fa-regular fa-eye text-sm"></i>
+              <span class="font-mono font-extrabold text-sm tracking-widest bg-white/90 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-amber-300 select-all cursor-pointer" title="Click to fill" onclick="document.getElementById('admin_otp').value=this.innerText.trim()">
+                <?php echo htmlspecialchars($_SESSION['admin_otp_pending']['otp']); ?>
+              </span>
+            </div>
+          <?php endif; ?>
+
+          <!-- OTP Form -->
+          <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-5">
+            <input type="hidden" name="verify_admin_otp" value="1">
+
+            <div class="space-y-2">
+              <label class="text-xs font-bold uppercase tracking-wider text-muted-custom block text-center" for="admin_otp">Enter 6-Digit Code</label>
+              <div class="relative">
+                <input type="text" id="admin_otp" name="admin_otp" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" placeholder="• • • • • •" required autofocus autocomplete="one-time-code"
+                       class="custom-input w-full rounded-xl py-3.5 text-center text-2xl font-black tracking-[10px] outline-none text-primary-custom focus:border-indigo-500">
+              </div>
+              <div class="text-[11px] text-muted-custom text-center">Code expires in 10 minutes</div>
+            </div>
+
+            <!-- Verify Button -->
+            <button type="submit" 
+                    class="w-full btn-primary-gradient text-white rounded-xl py-3 text-sm font-bold tracking-wide transition-all duration-300 cursor-pointer shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transform active:scale-[0.98]">
+              <i class="fa-solid fa-lock-open mr-2"></i> Verify &amp; Go to Dashboard
+            </button>
+          </form>
+
+          <!-- Resend & Back Actions -->
+          <div class="mt-6 pt-5 border-t border-[var(--border-color)] flex items-center justify-between">
+            <a href="index.php?cancel_otp=1" class="text-xs font-semibold text-muted-custom hover:text-primary-custom transition-colors inline-flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-left"></i> Back to Login
+            </a>
+            <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="inline">
+              <button type="submit" name="resend_admin_otp" value="1" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer border-none bg-transparent p-0">
+                <i class="fa-solid fa-arrows-rotate"></i> Resend Code
               </button>
+            </form>
+          </div>
+
+        <?php else: ?>
+          <!-- STEP 1: NORMAL SIGN IN (Credentials Input) -->
+          <!-- Welcome Header -->
+          <div class="mb-8">
+            <h2 class="text-2xl font-extrabold text-primary-custom tracking-tight mb-2">Welcome back!</h2>
+            <p class="text-secondary-custom text-sm">Please sign in to your affiliate account to continue.</p>
+          </div>
+
+          <!-- Error message alerts -->
+          <?php 
+          if($_SERVER['REQUEST_METHOD'] == 'POST' && ($errormsg!="")) {
+            print $errormsg;
+          }
+          ?>
+
+          <!-- Form Container -->
+          <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-6">
+            
+            <!-- Username or Email Input -->
+            <div class="space-y-2">
+              <label class="text-xs font-bold uppercase tracking-wider text-muted-custom" for="username">Username or Email</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-muted-custom pointer-events-none transition-colors duration-200">
+                  <i class="fa-solid fa-user text-xs"></i>
+                </span>
+                <input type="text" id="username" name="username" placeholder="Enter your username or email" minlength="3" required
+                       value="<?php echo htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                       autocomplete="username"
+                       class="custom-input w-full rounded-xl py-3 pl-10 pr-4 text-sm outline-none">
+              </div>
             </div>
-          </div>
 
-          <!-- Sign In Button -->
-          <button type="submit" 
-                  class="w-full btn-primary-gradient text-white rounded-xl py-3 text-sm font-bold tracking-wide transition-all duration-300 cursor-pointer shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transform active:scale-[0.98]">
-            Sign In
-          </button>
+            <!-- Password Input -->
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-custom" for="password">Password</label>
+                <a href="forgotpassword.php" class="text-xs font-semibold text-indigo-500 hover:text-indigo-600 dark:text-indigo-600 dark:hover:text-indigo-300 transition duration-150">Forgot password?</a>
+              </div>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-muted-custom pointer-events-none transition-colors duration-200">
+                  <i class="fa-solid fa-lock text-xs"></i>
+                </span>
+                <input type="password" id="password" name="password" placeholder="Enter your password" minlength="4" required
+                       autocomplete="current-password"
+                       class="custom-input w-full rounded-xl py-3 pl-10 pr-10 text-sm outline-none">
+                <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted-custom hover:text-indigo-500 transition-colors duration-200 focus:outline-none cursor-pointer">
+                  <i class="fa-regular fa-eye text-sm"></i>
+                </button>
+              </div>
+            </div>
 
-          <!-- Divider -->
-          <div class="flex items-center my-6">
-            <div class="flex-grow border-t border-[var(--border-color)]"></div>
-            <span class="mx-3 text-[10px] text-muted-custom font-bold uppercase tracking-wider">New to portal?</span>
-            <div class="flex-grow border-t border-[var(--border-color)]"></div>
-          </div>
+            <!-- Sign In Button -->
+            <button type="submit" 
+                    class="w-full btn-primary-gradient text-white rounded-xl py-3 text-sm font-bold tracking-wide transition-all duration-300 cursor-pointer shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transform active:scale-[0.98]">
+              Sign In
+            </button>
 
-          <!-- Secondary Register CTA -->
-          <a href="signup.php" 
-             class="w-full flex items-center justify-center bg-[var(--logo-bg)] hover:bg-[var(--border-color)] border border-[var(--border-color)] text-primary-custom rounded-xl py-3 text-sm font-bold transition-all duration-200 text-center">
-            Create an Account
-          </a>
+            <!-- Divider -->
+            <div class="flex items-center my-6">
+              <div class="flex-grow border-t border-[var(--border-color)]"></div>
+              <span class="mx-3 text-[10px] text-muted-custom font-bold uppercase tracking-wider">New to portal?</span>
+              <div class="flex-grow border-t border-[var(--border-color)]"></div>
+            </div>
 
-        </form>
+            <!-- Secondary Register CTA -->
+            <a href="signup.php" 
+               class="w-full flex items-center justify-center bg-[var(--logo-bg)] hover:bg-[var(--border-color)] border border-[var(--border-color)] text-primary-custom rounded-xl py-3 text-sm font-bold transition-all duration-200 text-center">
+              Create an Account
+            </a>
+
+          </form>
+        <?php endif; ?>
       </div>
     </div>
   </div>

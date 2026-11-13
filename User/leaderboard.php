@@ -17,7 +17,8 @@ $username = $_SESSION['username'];
 $current_user = mlmp_pdo_fetch($pdo, "SELECT Id, fname, tamount, rank_title FROM affiliateuser WHERE username = ?", [$username]);
 $current_user_id = $current_user['Id'] ?? 0;
 
-// Filter: weekly, monthly, all
+// Filter: limit (10, 25, 50)
+$limit = in_array((int)($_GET['limit'] ?? 10), [10, 25, 50]) ? (int)($_GET['limit'] ?? 10) : 10;
 $filter = $_GET['filter'] ?? 'all';
 
 // === TOP EARNERS ===
@@ -27,7 +28,7 @@ $top_earners = mlmp_pdo_fetch_all($pdo, "
     FROM affiliateuser 
     WHERE level = 2 AND active = 1
     ORDER BY tamount DESC 
-    LIMIT 10
+    LIMIT $limit
 ");
 
 // === TOP RECRUITERS ===
@@ -39,7 +40,7 @@ $top_recruiters = mlmp_pdo_fetch_all($pdo, "
     WHERE u.level = 2 AND u.active = 1
     GROUP BY u.Id
     ORDER BY referral_count DESC
-    LIMIT 10
+    LIMIT $limit
 ");
 
 // === RANK SYSTEM ===
@@ -149,6 +150,28 @@ foreach ($ranks as $r) {
   </div>
 </div>
 
+<!-- Leaderboard Search & Controls Toolbar -->
+<div class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm flex items-center justify-between flex-wrap gap-4">
+  <div class="flex items-center gap-3 flex-1 min-w-[240px]">
+    <div class="relative flex-1">
+      <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+      <input type="text" id="lbLiveSearchInput" placeholder="Filter leaders by name, username or rank..."
+             class="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+      <button type="button" id="lbClearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Clear">
+        <i class="fa-solid fa-circle-xmark"></i>
+      </button>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <span class="text-xs text-slate-400 font-semibold">Show:</span>
+    <?php foreach ([10, 25, 50] as $lim): ?>
+      <a href="?limit=<?php echo $lim; ?>" class="px-2.5 py-1 text-xs rounded-lg font-bold border transition-colors <?php echo $limit === $lim ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'; ?>">
+        Top <?php echo $lim; ?>
+      </a>
+    <?php endforeach; ?>
+  </div>
+</div>
+
 <!-- Top Earners & Top Recruiters -->
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
   
@@ -164,12 +187,12 @@ foreach ($ranks as $r) {
           <p class="text-[11px] text-slate-400">Highest earnings</p>
         </div>
       </div>
-      <span class="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-trophy mr-1"></i> Top 10</span>
+      <span class="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-trophy mr-1"></i> Top <?php echo $limit; ?></span>
     </div>
 
     <!-- Podium for top 3 -->
     <?php if (count($top_earners) >= 3): ?>
-    <div class="flex items-end justify-center gap-3 px-6 pt-6 pb-4">
+    <div id="earnersPodium" class="flex items-end justify-center gap-3 px-6 pt-6 pb-4">
       <!-- 2nd Place -->
       <div class="text-center flex-1 max-w-[110px]">
         <div class="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-white font-bold text-lg shadow-lg mb-2">2</div>
@@ -203,12 +226,14 @@ foreach ($ranks as $r) {
     <?php endif; ?>
 
     <!-- Full list -->
-    <div class="px-4 pb-4">
+    <div class="px-4 pb-4" id="topEarnersList">
       <?php foreach ($top_earners as $i => $earner): 
         $is_me = ($earner['username'] === $username);
         $pos = $i + 1;
+        $search_blob = strtolower($earner['fname'] . ' ' . $earner['username'] . ' ' . $earner['rank_title']);
       ?>
-      <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl <?php echo $is_me ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'; ?> transition-colors mb-1">
+      <div class="lb-earner-card flex items-center gap-3 px-3 py-2.5 rounded-xl <?php echo $is_me ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'; ?> transition-colors mb-1"
+           data-search="<?php echo htmlspecialchars($search_blob); ?>">
         <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0
           <?php echo $pos === 1 ? 'bg-yellow-100 text-yellow-700' : ($pos === 2 ? 'bg-slate-100 text-slate-600' : ($pos === 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-50 text-slate-500')); ?>">
           <?php echo $pos; ?>
@@ -223,6 +248,9 @@ foreach ($ranks as $r) {
         <div class="text-sm font-bold text-slate-800">₹<?php echo number_format((float)$earner['tamount'], 0); ?></div>
       </div>
       <?php endforeach; ?>
+      <div id="noEarnersMatch" class="hidden text-center py-6 text-slate-400 text-xs font-medium">
+        No earners matching your filter.
+      </div>
       <?php if (empty($top_earners)): ?>
       <div class="text-center py-8 text-slate-400">
         <i class="fa-solid fa-chart-simple text-3xl mb-2"></i>
@@ -244,18 +272,20 @@ foreach ($ranks as $r) {
           <p class="text-[11px] text-slate-400">Most direct referrals</p>
         </div>
       </div>
-      <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-user-plus mr-1"></i> Top 10</span>
+      <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-user-plus mr-1"></i> Top <?php echo $limit; ?></span>
     </div>
 
     <!-- Full list -->
-    <div class="px-4 py-4">
+    <div class="px-4 py-4" id="topRecruitersList">
       <?php foreach ($top_recruiters as $i => $recruiter): 
         $is_me = ($recruiter['username'] === $username);
         $pos = $i + 1;
         $max_refs = max(1, (int)($top_recruiters[0]['referral_count'] ?? 1));
         $bar_width = max(5, ((int)$recruiter['referral_count'] / $max_refs) * 100);
+        $search_blob = strtolower($recruiter['fname'] . ' ' . $recruiter['username'] . ' ' . $recruiter['rank_title']);
       ?>
-      <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl <?php echo $is_me ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'; ?> transition-colors mb-1">
+      <div class="lb-recruiter-card flex items-center gap-3 px-3 py-2.5 rounded-xl <?php echo $is_me ? 'bg-purple-50 border border-purple-200' : 'hover:bg-slate-50'; ?> transition-colors mb-1"
+           data-search="<?php echo htmlspecialchars($search_blob); ?>">
         <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0
           <?php echo $pos === 1 ? 'bg-emerald-100 text-emerald-700' : ($pos === 2 ? 'bg-slate-100 text-slate-600' : ($pos === 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-50 text-slate-500')); ?>">
           <?php echo $pos; ?>
@@ -275,6 +305,9 @@ foreach ($ranks as $r) {
         </div>
       </div>
       <?php endforeach; ?>
+      <div id="noRecruitersMatch" class="hidden text-center py-6 text-slate-400 text-xs font-medium">
+        No recruiters matching your filter.
+      </div>
       <?php if (empty($top_recruiters)): ?>
       <div class="text-center py-8 text-slate-400">
         <i class="fa-solid fa-users text-3xl mb-2"></i>
@@ -332,5 +365,73 @@ foreach ($ranks as $r) {
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('lbLiveSearchInput');
+    const clearBtn = document.getElementById('lbClearSearchBtn');
+    const earnerCards = document.querySelectorAll('.lb-earner-card');
+    const recruiterCards = document.querySelectorAll('.lb-recruiter-card');
+    const noEarners = document.getElementById('noEarnersMatch');
+    const noRecruiters = document.getElementById('noRecruitersMatch');
+    const podium = document.getElementById('earnersPodium');
+
+    let debounceTimer = null;
+
+    function filterLeaderboard() {
+        const query = (searchInput.value || '').trim().toLowerCase();
+        if (query.length > 0) {
+            clearBtn.classList.remove('hidden');
+            if (podium) podium.style.opacity = '0.35';
+        } else {
+            clearBtn.classList.add('hidden');
+            if (podium) podium.style.opacity = '1';
+        }
+
+        let visibleEarners = 0;
+        earnerCards.forEach(card => {
+            const text = card.getAttribute('data-search') || '';
+            if (!query || text.includes(query)) {
+                card.style.display = 'flex';
+                visibleEarners++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        if (noEarners) {
+            noEarners.classList.toggle('hidden', visibleEarners > 0);
+        }
+
+        let visibleRecruiters = 0;
+        recruiterCards.forEach(card => {
+            const text = card.getAttribute('data-search') || '';
+            if (!query || text.includes(query)) {
+                card.style.display = 'flex';
+                visibleRecruiters++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        if (noRecruiters) {
+            noRecruiters.classList.toggle('hidden', visibleRecruiters > 0);
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(filterLeaderboard, 250);
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            filterLeaderboard();
+            searchInput.focus();
+        });
+    }
+});
+</script>
 
 <?php include("layout_footer.php"); ?>

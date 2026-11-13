@@ -70,26 +70,91 @@ $package_revenue_split = mlmp_pdo_fetch_all($pdo, "
     GROUP BY p.id, p.name
 ");
 
-// --- Pagination for Recent Payments on Dashboard ---
+// --- Search, Sort & Pagination for Recent Payments on Dashboard ---
 $pay_per_page = 10;
 $pay_current_page = max(1, (int)($_GET['pay_page'] ?? 1));
-$total_recent_payments = mlmp_pdo_count($pdo, "SELECT COUNT(*) FROM payu_payments WHERE gateway = 'PayU'");
+$pay_search = trim($_GET['pay_search'] ?? '');
+$pay_sort = $_GET['pay_sort'] ?? 'id';
+$pay_order = strtolower($_GET['pay_order'] ?? 'desc');
+if (!in_array($pay_order, ['asc', 'desc'])) $pay_order = 'desc';
+
+$pay_sort_columns = [
+    'id'        => 'p.id',
+    'transacid' => 'p.transacid',
+    'username'  => 'u.username',
+    'price'     => 'p.price',
+    'date'      => 'p.date',
+];
+$pay_sort_sql = $pay_sort_columns[$pay_sort] ?? 'p.id';
+
+$pay_where = ["p.gateway = 'PayU'"];
+$pay_params = [];
+if ($pay_search !== '') {
+    $pay_where[] = "(p.transacid LIKE ? OR u.username LIKE ? OR p.id = ? OR pkg.name LIKE ?)";
+    $like = '%' . $pay_search . '%';
+    $pay_params[] = $like; $pay_params[] = $like;
+    $pay_params[] = is_numeric($pay_search) ? (int)$pay_search : 0;
+    $pay_params[] = $like;
+}
+$pay_where_sql = implode(' AND ', $pay_where);
+
+$total_recent_payments = mlmp_pdo_count($pdo, "
+    SELECT COUNT(*) 
+    FROM payu_payments p 
+    LEFT JOIN affiliateuser u ON u.Id = p.orderid 
+    LEFT JOIN packages pkg ON pkg.id = u.pcktaken
+    WHERE $pay_where_sql
+", $pay_params);
+
 $pay_total_pages = max(1, (int)ceil($total_recent_payments / $pay_per_page));
 if ($pay_current_page > $pay_total_pages) {
     $pay_current_page = $pay_total_pages;
 }
 $pay_offset = ($pay_current_page - 1) * $pay_per_page;
 
-// Fetch paginated recent online payment records (PayU/online) - Newest first
+// Fetch paginated recent online payment records (PayU/online)
 $recent_payments = mlmp_pdo_fetch_all($pdo, "
     SELECT p.id, p.transacid, p.price, p.currency, p.date, u.username, pkg.name AS package_name
     FROM payu_payments p
     LEFT JOIN affiliateuser u ON u.Id = p.orderid
     LEFT JOIN packages pkg ON pkg.id = u.pcktaken
-    WHERE p.gateway = 'PayU'
-    ORDER BY p.id DESC
+    WHERE $pay_where_sql
+    ORDER BY $pay_sort_sql $pay_order
     LIMIT $pay_per_page OFFSET $pay_offset
-");
+", $pay_params);
+
+function build_dash_pay_query($override = []) {
+    global $pay_search, $pay_sort, $pay_order, $pay_current_page;
+    $p = [
+        'pay_search' => $pay_search,
+        'pay_sort'   => $pay_sort,
+        'pay_order'  => $pay_order,
+        'pay_page'   => $pay_current_page
+    ];
+    $merged = array_merge($p, $override);
+    if (empty($merged['pay_search'])) unset($merged['pay_search']);
+    if ($merged['pay_sort'] === 'id') unset($merged['pay_sort']);
+    if ($merged['pay_order'] === 'desc') unset($merged['pay_order']);
+    return http_build_query($merged);
+}
+
+function sort_th_dash_pay($key, $label, $cur_sort, $cur_order, $align = 'left') {
+    $is_active = ($cur_sort === $key);
+    $next_order = ($is_active && $cur_order === 'asc') ? 'desc' : 'asc';
+    $icon = '<i class="fa-solid fa-sort text-slate-300 ml-1 text-[11px]"></i>';
+    if ($is_active) {
+        $icon = ($cur_order === 'asc') 
+            ? '<i class="fa-solid fa-sort-up text-indigo-600 ml-1 text-[11px]"></i>' 
+            : '<i class="fa-solid fa-sort-down text-indigo-600 ml-1 text-[11px]"></i>';
+    }
+    $align_cls = $align === 'right' ? 'text-right' : ($align === 'center' ? 'text-center' : 'text-left');
+    $q = build_dash_pay_query(['pay_sort' => $key, 'pay_order' => $next_order, 'pay_page' => 1]);
+    return "<th class=\"px-5 py-3 font-semibold {$align_cls}\">
+        <a href=\"?{$q}#recentPaymentsSection\" class=\"inline-flex items-center hover:text-indigo-600 transition-colors\">
+            <span>{$label}</span> {$icon}
+        </a>
+    </th>";
+}
 
 // Fetch Facebook/Twitter links safely
 $settings_row = mlmp_pdo_fetch($pdo, "SELECT fblink, twitterlink FROM settings");
@@ -297,31 +362,55 @@ include("layout_header.php");
 <!-- Recent Payment Records -->
 <div id="recentPaymentsSection" class="mb-8">
   <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <div class="px-5 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div class="text-sm font-bold text-slate-900 flex items-center gap-2">
         <i class="fa-solid fa-money-check-dollar text-green-500"></i> Recent Online Payment Records
         <span class="bg-slate-100 text-slate-600 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-slate-200"><?php echo $total_recent_payments; ?> Total</span>
       </div>
-      <a href="payments.php" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1">
-        View Full Ledger <i class="fa-solid fa-arrow-right text-[10px]"></i>
-      </a>
+      
+      <!-- Debounced Search for Payments -->
+      <div class="flex items-center gap-3">
+        <form id="dashPaySearchForm" method="GET" action="#recentPaymentsSection" class="flex items-center gap-1.5">
+          <input type="hidden" name="pay_sort" value="<?php echo htmlspecialchars($pay_sort); ?>">
+          <input type="hidden" name="pay_order" value="<?php echo htmlspecialchars($pay_order); ?>">
+          <input type="hidden" name="pay_page" value="1">
+          <div class="relative w-48 sm:w-60">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="dashPaySearchInput" name="pay_search" value="<?php echo htmlspecialchars($pay_search); ?>" 
+                   placeholder="Search user, trans ID, pkg..." 
+                   class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-7 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-100 transition-all">
+            <?php if (!empty($pay_search)): ?>
+              <a href="?<?php echo build_dash_pay_query(['pay_search' => '', 'pay_page' => 1]); ?>#recentPaymentsSection" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs" title="Clear Search">
+                <i class="fa-solid fa-circle-xmark"></i>
+              </a>
+            <?php endif; ?>
+          </div>
+        </form>
+
+        <a href="payments.php" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1 whitespace-nowrap">
+          View Full Ledger <i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </a>
+      </div>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-600 border-b border-slate-200">
-            <th class="px-5 py-3 font-semibold">Payment ID</th>
-            <th class="px-5 py-3 font-semibold">Transaction ID</th>
-            <th class="px-5 py-3 font-semibold">Member</th>
+            <?php echo sort_th_dash_pay('id', 'Payment ID', $pay_sort, $pay_order); ?>
+            <?php echo sort_th_dash_pay('transacid', 'Transaction ID', $pay_sort, $pay_order); ?>
+            <?php echo sort_th_dash_pay('username', 'Member', $pay_sort, $pay_order); ?>
             <th class="px-5 py-3 font-semibold">Package</th>
-            <th class="px-5 py-3 font-semibold text-right">Amount</th>
-            <th class="px-5 py-3 font-semibold text-right">Date</th>
+            <?php echo sort_th_dash_pay('price', 'Amount', $pay_sort, $pay_order, 'right'); ?>
+            <?php echo sort_th_dash_pay('date', 'Date', $pay_sort, $pay_order, 'right'); ?>
           </tr>
         </thead>
         <tbody class="text-sm text-slate-700 divide-y divide-slate-100">
           <?php if (count($recent_payments) === 0): ?>
             <tr>
-              <td colspan="6" class="px-5 py-8 text-center text-slate-600 text-sm">No online payments found.</td>
+              <td colspan="6" class="px-5 py-8 text-center text-slate-600 text-sm">
+                <i class="fa-solid fa-receipt text-2xl text-slate-300 mb-2 block"></i>
+                No online payments found matching your criteria.
+              </td>
             </tr>
           <?php else: ?>
             <?php foreach ($recent_payments as $rp): ?>
@@ -330,8 +419,8 @@ include("layout_header.php");
                 <td class="px-5 py-3"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs text-indigo-600 font-mono"><?php echo mlmp_escape($rp['transacid'] ?? ''); ?></code></td>
                 <td class="px-5 py-3 text-emerald-600 font-medium">@<?php echo mlmp_escape($rp['username'] ?? 'Unknown'); ?></td>
                 <td class="px-5 py-3"><?php echo mlmp_escape($rp['package_name'] ?? 'N/A'); ?></td>
-                <td class="px-5 py-3 text-right font-semibold text-slate-900"><?php echo mlmp_escape($rp['currency'] ?? ''); ?> <?php echo number_format((float)($rp['price'] ?? 0), 2); ?></td>
-                <td class="px-5 py-3 text-right text-xs text-slate-400"><?php echo !empty($rp['date']) ? date('M d, Y H:i', strtotime($rp['date'])) : '-'; ?></td>
+                <td class="px-5 py-3 text-right font-semibold text-slate-900 whitespace-nowrap"><?php echo mlmp_escape($rp['currency'] ?? ''); ?> <?php echo number_format((float)($rp['price'] ?? 0), 2); ?></td>
+                <td class="px-5 py-3 text-right text-xs text-slate-400 whitespace-nowrap"><?php echo !empty($rp['date']) ? date('M d, Y H:i', strtotime($rp['date'])) : '-'; ?></td>
               </tr>
             <?php endforeach; ?>
           <?php endif; ?>
@@ -345,12 +434,9 @@ include("layout_header.php");
         <div class="text-slate-500 font-medium">
             Showing page <strong class="text-slate-800"><?php echo $pay_current_page; ?></strong> of <strong class="text-slate-800"><?php echo $pay_total_pages; ?></strong> &mdash; records <strong class="text-slate-800"><?php echo ($pay_offset + 1); ?></strong>-<strong><?php echo min($total_recent_payments, $pay_offset + $pay_per_page); ?></strong> of <strong><?php echo $total_recent_payments; ?></strong>
         </div>
-        <div class="flex items-center gap-1">
-            <?php
-            $pay_base_url = '?pay_page=';
-            $pay_anchor = '#recentPaymentsSection';
-            if ($pay_current_page > 1): ?>
-                <a href="<?php echo $pay_base_url . ($pay_current_page - 1) . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
+        <div class="flex items-center gap-1 flex-wrap justify-center">
+            <?php if ($pay_current_page > 1): ?>
+                <a href="?<?php echo build_dash_pay_query(['pay_page' => $pay_current_page - 1]); ?>#recentPaymentsSection" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
                     <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
                 </a>
             <?php endif; ?>
@@ -360,12 +446,12 @@ include("layout_header.php");
             $start = max(1, $pay_current_page - $range);
             $end = min($pay_total_pages, $pay_current_page + $range);
             if ($start > 1): ?>
-                <a href="<?php echo $pay_base_url . '1' . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">1</a>
+                <a href="?<?php echo build_dash_pay_query(['pay_page' => 1]); ?>#recentPaymentsSection" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">1</a>
                 <?php if ($start > 2): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
             <?php endif; ?>
 
             <?php for ($p = $start; $p <= $end; $p++): ?>
-                <a href="<?php echo $pay_base_url . $p . $pay_anchor; ?>" 
+                <a href="?<?php echo build_dash_pay_query(['pay_page' => $p]); ?>#recentPaymentsSection" 
                    class="px-2.5 py-1.5 rounded-lg border font-bold transition-all shadow-sm <?php echo ($p === $pay_current_page) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600'; ?>">
                     <?php echo $p; ?>
                 </a>
@@ -373,11 +459,11 @@ include("layout_header.php");
 
             <?php if ($end < $pay_total_pages): ?>
                 <?php if ($end < $pay_total_pages - 1): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
-                <a href="<?php echo $pay_base_url . $pay_total_pages . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"><?php echo $pay_total_pages; ?></a>
+                <a href="?<?php echo build_dash_pay_query(['pay_page' => $pay_total_pages]); ?>#recentPaymentsSection" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"><?php echo $pay_total_pages; ?></a>
             <?php endif; ?>
 
             <?php if ($pay_current_page < $pay_total_pages): ?>
-                <a href="<?php echo $pay_base_url . ($pay_current_page + 1) . $pay_anchor; ?>" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
+                <a href="?<?php echo build_dash_pay_query(['pay_page' => $pay_current_page + 1]); ?>#recentPaymentsSection" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
                     Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
                 </a>
             <?php endif; ?>
@@ -587,6 +673,8 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
     });
+    // Debounce search on Recent Payments
+    initTableSearchDebounce('dashPaySearchInput', 'dashPaySearchForm', 450);
 });
 </script>
 <?php include("layout_footer.php"); ?>

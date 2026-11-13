@@ -1,3 +1,16 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (isset($_SESSION['adminidusername']) && !empty($_SESSION['adminidusername'])) {
+    header("Location: dashboard.php");
+    exit;
+}
+if (isset($_SESSION['admin_otp_pending']) && !empty($_SESSION['admin_otp_pending']['username'])) {
+    header("Location: ../index.php");
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

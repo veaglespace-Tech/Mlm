@@ -63,8 +63,11 @@ if (!function_exists('nav_active')) {
   <aside id="dashSidebar" class="w-[260px] bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none">
 
     <!-- Logo -->
-    <div class="px-5 pt-6 pb-4 border-b border-slate-100 flex items-center gap-2.5">
+    <div class="px-5 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
       <span class="text-[17px] font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent whitespace-nowrap"><?php echo mlmp_escape($_layout_brand); ?></span>
+      <button onclick="closeSidebar()" class="lg:hidden text-slate-400 hover:text-slate-700 p-1 rounded-lg focus:outline-none" aria-label="Close sidebar">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
     </div>
 
     <!-- User block -->
