@@ -31,10 +31,7 @@ $acctype = $_POST['acctype'] ?? '';
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>update profile</title>
-<link rel="stylesheet" type="text/css" href="css/default.css" />
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.3.1/jquery.min.js"></script>
-<script type="text/javascript" src="js/main.js"></script>
 <div id="google_translate_element" align="right"></div><script type="text/javascript">
 function googleTranslateElementInit() {
   new google.translate.TranslateElement({pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE, multilanguagePage: true}, 'google_translate_element');

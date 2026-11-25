@@ -26,10 +26,7 @@ $package=$_POST['package'] ?? '';
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>Sign Up Now</title>
-<link rel="stylesheet" type="text/css" href="css/default.css" />
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.3.1/jquery.min.js"></script>
-<script type="text/javascript" src="js/main.js"></script>
+<title>Update User</title>
 </head>
 <?php
 $check=1;

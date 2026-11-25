@@ -1,6 +1,6 @@
 Options -Indexes
 
-<FilesMatch "^(z_db|password_helper|updatesql|restore_footer|check_settings)\.php$">
+<FilesMatch "^(z_db|password_helper|csrf_helper|smtp_helper|schema_migrations|layout_header|layout_footer|restore_footer|check_settings)\.php$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>
