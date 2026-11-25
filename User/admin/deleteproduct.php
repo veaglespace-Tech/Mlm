@@ -13,13 +13,15 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
-    $id = (int)$_POST['productdelid'];
+    verify_csrf_token();
+    $id = (int)($_POST['productdelid'] ?? 0);
     
-    $query = "UPDATE products SET active = 0 WHERE id=$id";
-    if(mysqli_query($con, $query)) {
+    try {
+        $stmt = $pdo->prepare("UPDATE products SET active = 0 WHERE id = ?");
+        $stmt->execute([$id]);
         $_SESSION['product_message'] = "Success: Product deactivated successfully!";
-    } else {
-        $_SESSION['product_message'] = "Error: Failed to deactivate product. " . mysqli_error($con);
+    } catch (PDOException $e) {
+        $_SESSION['product_message'] = "Error: Failed to deactivate product.";
     }
     
     header("Location: productsettings.php");

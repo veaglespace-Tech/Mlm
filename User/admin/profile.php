@@ -64,6 +64,7 @@ $admin_referral_url = mlmp_build_referral_url($settings_row['wlink'] ?? '', $_SE
     </div>
     <div class="p-6">
         <form action="profileupdate.php" method="post" class="flex flex-col gap-6">
+            <?php echo csrf_field(); ?>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>

@@ -98,6 +98,7 @@ $notifications = mlmp_pdo_fetch_all($pdo, "SELECT * FROM notifications ORDER BY 
                                 
                                 <div class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
                                         <form action="deletenoti.php" method="post" class="w-full">
+                                            <?php echo csrf_field(); ?>
                                             <input type="hidden" name="notisub" value="<?php echo $id; ?>">
                                             <button type="submit" class="w-full bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 py-2.5 text-center text-xs font-bold rounded-lg transition-colors shadow-sm" onclick="return confirm('Are you sure you want to completely delete this notification?');">
                                                 <i class="fa-solid fa-trash-can mr-1"></i> Delete Notification
@@ -151,6 +152,7 @@ $notifications = mlmp_pdo_fetch_all($pdo, "SELECT * FROM notifications ORDER BY 
             <div class="tab-pane" id="create">
                 <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 max-w-2xl mx-auto">
                     <form action="postnoti.php" method="post" class="flex flex-col gap-5">
+                        <?php echo csrf_field(); ?>
                         <div class="mb-2 border-b border-slate-100 pb-2">
                             <h4 class="text-sm font-bold text-slate-900 m-0"><i class="fa-solid fa-pen-nib text-indigo-500 mr-1.5"></i> Compose Announcement</h4>
                         </div>

@@ -16,6 +16,7 @@ $msg = '';
 
 // Handle Actions (Approve / Reject)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf_token();
     $action = $_POST['action'] ?? '';
     $kyc_id = (int)($_POST['kyc_id'] ?? 0);
 
@@ -352,6 +353,7 @@ function build_kyc_query($override = []) {
                   <div class="flex items-center justify-end gap-2">
                     <?php if ($r['status'] !== 'approved'): ?>
                       <form action="kyc.php?status=<?php echo urlencode($status_filter); ?>" method="POST" onsubmit="return confirm('Approve KYC for <?php echo htmlspecialchars($r['username']); ?>?');" class="inline">
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" name="action" value="approve">
                         <input type="hidden" name="kyc_id" value="<?php echo $r['id']; ?>">
                         <button type="submit" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition-all flex items-center gap-1">
@@ -436,6 +438,7 @@ function build_kyc_query($override = []) {
     </div>
 
     <form action="kyc.php?status=<?php echo urlencode($status_filter); ?>" method="POST" class="p-6 space-y-4">
+      <?php echo csrf_field(); ?>
       <input type="hidden" name="action" value="reject">
       <input type="hidden" name="kyc_id" id="reject_kyc_id" value="">
 

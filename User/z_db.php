@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/csrf_helper.php';
+
 // Load configuration from .env file
 $envPath = __DIR__ . '/../.env';
 if (file_exists($envPath)) {
@@ -43,6 +45,18 @@ if ($con->connect_errno) {
 require_once __DIR__ . '/schema_migrations.php';
 
 // Global Helper Functions for Secure Queries
+function mlmp_update_env_file($key, $value) {
+    $envPath = __DIR__ . '/../.env';
+    if (!file_exists($envPath)) return false;
+    $content = file_get_contents($envPath);
+    if (preg_match('/^' . preg_quote($key, '/') . '=.*/m', $content)) {
+        $content = preg_replace('/^' . preg_quote($key, '/') . '=.*/m', $key . '=' . $value, $content);
+    } else {
+        $content .= "\n" . $key . '=' . $value;
+    }
+    return @file_put_contents($envPath, $content);
+}
+
 function mlmp_pdo_count($pdo, $sql, $params = []) {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

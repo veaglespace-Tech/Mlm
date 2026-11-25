@@ -1,4 +1,5 @@
 <?php
+include_once("z_db.php");
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -57,6 +58,7 @@ body { font-family: 'Inter', sans-serif; }
       </p>
 
       <form action="loginproc.php" method="post" class="flex flex-col gap-3.5">
+        <?php echo csrf_field(); ?>
         <div class="relative">
             <i class="fa-solid fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-[#748da1]"></i>
             <input type="text" name="username" placeholder="Email / Username" minlength="3" required 

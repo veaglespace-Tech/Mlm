@@ -31,6 +31,7 @@ $msg = '';
 
 // Handle reply
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_reply'])) {
+    verify_csrf_token();
     $message = trim($_POST['message'] ?? '');
     if (strlen($message) < 3) {
         $msg = "<div class='bg-red-500/10 border border-red-500/20 text-red-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-circle-exclamation'></i> Message must be at least 3 characters.</div>";
@@ -124,6 +125,7 @@ $sc = status_color($ticket['status']);
 <?php if ($ticket['status'] !== 'closed'): ?>
 <div class="bg-white rounded-2xl border border-slate-200 p-5">
   <form method="POST">
+    <?php echo csrf_field(); ?>
     <input type="hidden" name="send_reply" value="1">
     <label class="block text-xs font-semibold text-slate-600 mb-2">Your Reply</label>
     <textarea name="message" required rows="3" minlength="3" placeholder="Type your reply here..."

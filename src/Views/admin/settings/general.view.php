@@ -2,9 +2,8 @@
 ensure_settings_referral_schema($pdo);
 
 // Fetch settings
-$query = "SELECT * FROM settings LIMIT 1";
-$result = mysqli_query($con, $query);
-if ($row = mysqli_fetch_array($result)) {
+$row = mlmp_pdo_fetch($pdo, "SELECT * FROM settings LIMIT 1");
+if ($row) {
     $email = $row['email'];
     $wlink = $row['wlink'];
     $ide = $row['invoicedetails'];

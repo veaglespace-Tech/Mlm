@@ -7,13 +7,12 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 // Fetch user's package & currency info
-$urow = mysqli_fetch_array(mysqli_query($con, "SELECT pcktaken FROM affiliateuser WHERE username='" . $_SESSION['adminidusername'] . "'"));
+$urow = mlmp_pdo_fetch($pdo, "SELECT pcktaken FROM affiliateuser WHERE username = ?", [$_SESSION['adminidusername']]);
 $pcktaken = $urow['pcktaken'] ?? 0;
 $pckcur = '';
 $l1=$l2=$l3=$l4=$l5=$l6=$l7=$l8=$l9=$l10 = 0;
 if ($pcktaken) {
-    $re = mysqli_query($con, "SELECT * FROM packages WHERE id=$pcktaken");
-    $r  = mysqli_fetch_array($re);
+    $r = mlmp_pdo_fetch($pdo, "SELECT * FROM packages WHERE id = ?", [$pcktaken]);
     if ($r) {
         $pckcur = $r['currency'];
         $l1=$r['level1']; $l2=$r['level2']; $l3=$r['level3'];  $l4=$r['level4'];
@@ -544,13 +543,11 @@ if ($root_user === $_SESSION['adminidusername'] && $selected_board !== 'all' && 
         }
     }
 }
-$root_user_esc = mysqli_real_escape_string($con, $root_user);
+$root_user_esc = $root_user;
 
-function getTreeData($con, $username, $current_depth, $max_depth, $board_mode = '1') {
+function getTreeData($pdo, $username, $current_depth, $max_depth, $board_mode = '1') {
     if ($current_depth > $max_depth) return null;
-    $username_esc = mysqli_real_escape_string($con, $username);
-    $user_query = mysqli_query($con, "SELECT Id, fname, username, email, mobile, referedby, active, left_count, right_count, paid_pairs, tamount, position, doj, pcktaken FROM affiliateuser WHERE username='$username_esc'");
-    $user_data = mysqli_fetch_assoc($user_query);
+    $user_data = mlmp_pdo_fetch($pdo, "SELECT Id, fname, username, email, mobile, referedby, active, left_count, right_count, paid_pairs, tamount, position, doj, pcktaken FROM affiliateuser WHERE username = ?", [$username]);
     if (!$user_data) return null;
     $node = [
         'id' => $user_data['Id'],
@@ -573,16 +570,13 @@ function getTreeData($con, $username, $current_depth, $max_depth, $board_mode = 
     ];
     if ($current_depth < $max_depth) {
         if ($board_mode === 'all') {
-            $pair_query = mysqli_query($con, "SELECT Id FROM affiliateuser WHERE username='$username_esc' OR username LIKE '{$username_esc}_bc_%' ORDER BY Id ASC");
-            $pair_ids = [];
-            while ($p = mysqli_fetch_assoc($pair_query)) {
-                $pair_ids[] = (int)$p['Id'];
-            }
+            $pair_rows = mlmp_pdo_fetch_all($pdo, "SELECT Id FROM affiliateuser WHERE username = ? OR username LIKE ? ORDER BY Id ASC", [$username, $username . '_bc_%']);
+            $pair_ids = array_map(function($p) { return (int)$p['Id']; }, $pair_rows);
             if (count($pair_ids) > 1 && $current_depth == 1) {
-                $ids_str = implode(',', $pair_ids);
-                $children_query = mysqli_query($con, "SELECT username, position FROM affiliateuser WHERE parent_id IN ($ids_str) ORDER BY parent_id ASC, position ASC");
-                while ($child = mysqli_fetch_assoc($children_query)) {
-                    $child_node = getTreeData($con, $child['username'], $current_depth + 1, $max_depth, 'normal');
+                $placeholders = implode(',', array_fill(0, count($pair_ids), '?'));
+                $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id IN ($placeholders) ORDER BY parent_id ASC, position ASC", $pair_ids);
+                foreach ($children as $child) {
+                    $child_node = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, 'normal');
                     if ($child_node) {
                         $node['unilevel_children'][] = $child_node;
                     }
@@ -592,12 +586,12 @@ function getTreeData($con, $username, $current_depth, $max_depth, $board_mode = 
         }
         
         // Standard Pure Binary Node (L & R children only)
-        $children_query = mysqli_query($con, "SELECT username, position FROM affiliateuser WHERE parent_id=" . (int)$user_data['Id'] . " ORDER BY position ASC");
-        while ($child = mysqli_fetch_assoc($children_query)) {
+        $children = mlmp_pdo_fetch_all($pdo, "SELECT username, position FROM affiliateuser WHERE parent_id = ? ORDER BY position ASC", [(int)$user_data['Id']]);
+        foreach ($children as $child) {
             if ($child['position'] == 'L') {
-                $node['left'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth, 'normal');
+                $node['left'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, 'normal');
             } elseif ($child['position'] == 'R') {
-                $node['right'] = getTreeData($con, $child['username'], $current_depth + 1, $max_depth, 'normal');
+                $node['right'] = getTreeData($pdo, $child['username'], $current_depth + 1, $max_depth, 'normal');
             }
         }
     }
@@ -605,7 +599,7 @@ function getTreeData($con, $username, $current_depth, $max_depth, $board_mode = 
 }
 
 $max_depth = isset($_GET['depth']) ? min(12, max(2, (int)$_GET['depth'])) : 10;
-$tree_data = getTreeData($con, $root_user_esc, 1, $max_depth, $selected_board);
+$tree_data = getTreeData($pdo, $root_user, 1, $max_depth, $selected_board);
 
 function renderNodeHTML($node, $pos_label = '', $has_children = false, $is_collapsed = false) {
     if (!$node) {

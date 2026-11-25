@@ -16,6 +16,7 @@ if (!isset($_SESSION['username'])) {
 
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['todo']))
 {
+verify_csrf_token();
 
 
 // Collect the data from post method of form submission // 
@@ -149,6 +150,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && ($status!=""))
 </div>
 
 <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post">
+  <?php echo csrf_field(); ?>
   <input type="hidden" name="todo" value="post">
   <input type="hidden" value="" name="sno">
 

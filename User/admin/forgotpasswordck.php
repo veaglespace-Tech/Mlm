@@ -7,7 +7,8 @@ include_once("../smtp_helper.php");
 $html_response = "";
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = mysqli_real_escape_string($con, $_POST['femail'] ?? '');
+    verify_csrf_token();
+    $email = trim($_POST['femail'] ?? '');
     $status = 1;
     
     if ($status == 1) {
@@ -20,16 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $status = "NOTOK";
         }
         
-        if (!preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/i", $email)) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $msg = $msg . "Email Id is not valid. Please enter a correct email ID.<br>";
             $status = "NOTOK";
         }
         
-        $result = mysqli_query($con, "SELECT count(*) FROM affiliateuser where email = '$email'");
-        $row = mysqli_fetch_row($result);
-        $numrows = $row[0];
+        $numrows = mlmp_pdo_fetch_value($pdo, "SELECT count(*) FROM affiliateuser where email = ?", [$email]);
         
-        if (($numrows) == 0) {
+        if (!$numrows || ((int)$numrows) == 0) {
             $msg = $msg . "Your account was not found or is currently inactive. Please contact the administrator.<br>";
             $status = "NOTOK";
         }
@@ -37,8 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     if ($status == "OK") {
         $newpassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*'), 0, 14);
-        $hashedPassword = mysqli_real_escape_string($con, mlmp_hash_password($newpassword));
-        $re = mysqli_query($con, "UPDATE affiliateuser SET password = '$hashedPassword' WHERE email = '$email'");
+        $hashedPassword = mlmp_hash_password($newpassword);
+        $stmt = $pdo->prepare("UPDATE affiliateuser SET password = ? WHERE email = ?");
+        $stmt->execute([$hashedPassword, $email]);
         
         // dispatching mail
         $to = $email;

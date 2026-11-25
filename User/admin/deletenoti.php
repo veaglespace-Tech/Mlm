@@ -7,6 +7,7 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+verify_csrf_token();
 $ndel=(int)($_POST['notisub'] ?? 0); //fetching details through post method
 
 if ($ndel <= 0) {
@@ -15,12 +16,11 @@ header( "refresh:1;url=notifications.php" );
 exit;
 }
 
-$stmt = mysqli_prepare($con, "DELETE FROM notifications WHERE id=?");
-$res1 = false;
-if ($stmt) {
-mysqli_stmt_bind_param($stmt, "i", $ndel);
-$res1 = mysqli_stmt_execute($stmt);
-mysqli_stmt_close($stmt);
+try {
+    $stmt = $pdo->prepare("DELETE FROM notifications WHERE id = ?");
+    $res1 = $stmt->execute([$ndel]);
+} catch (PDOException $e) {
+    $res1 = false;
 }
 
 if($res1)

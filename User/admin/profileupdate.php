@@ -12,6 +12,7 @@ header( "refresh:3;url=profile.php" );
 
 // Collect the data from post method of form submission // 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+verify_csrf_token();
 $name = $_POST['fullname'] ?? '';
 $emaill = $_POST['email'] ?? '';
 $addrs = $_POST['address'] ?? '';

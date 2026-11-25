@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Location: approvals.php");
     exit;
 }
+verify_csrf_token();
 
 $action = $_POST['action'] ?? '';
 $username = $_POST['username'] ?? '';

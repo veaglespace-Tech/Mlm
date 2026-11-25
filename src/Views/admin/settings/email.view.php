@@ -2,29 +2,32 @@
     
     if ($action == 'update') {
         $id = (int)$_POST['id'];
-        $code = mysqli_real_escape_string($con, $_POST['code']);
-        $etext = mysqli_real_escape_string($con, $_POST['etext']);
+        $code = trim($_POST['code'] ?? '');
+        $etext = trim($_POST['etext'] ?? '');
         
         if (empty($code) || empty($etext)) {
             $errormsg = "Code and Email Content cannot be empty.";
         } else {
-            mysqli_query($con, "UPDATE emailtext SET code='$code', etext='$etext' WHERE id=$id");
+            $stmt = $pdo->prepare("UPDATE emailtext SET code = ?, etext = ? WHERE id = ?");
+            $stmt->execute([$code, $etext, $id]);
             $successmsg = "Template '$code' updated successfully.";
         }
     } 
     elseif ($action == 'delete') {
         $id = (int)$_POST['id'];
-        mysqli_query($con, "DELETE FROM emailtext WHERE id=$id");
+        $stmt = $pdo->prepare("DELETE FROM emailtext WHERE id = ?");
+        $stmt->execute([$id]);
         $successmsg = "Template deleted successfully.";
     }
     elseif ($action == 'create') {
-        $code = mysqli_real_escape_string($con, $_POST['new_code']);
-        $etext = mysqli_real_escape_string($con, $_POST['new_etext']);
+        $code = trim($_POST['new_code'] ?? '');
+        $etext = trim($_POST['new_etext'] ?? '');
         
         if (empty($code) || empty($etext)) {
             $errormsg = "Code and Email Content cannot be empty.";
         } else {
-            mysqli_query($con, "INSERT INTO emailtext (code, etext, emailactive) VALUES ('$code', '$etext', 1)");
+            $stmt = $pdo->prepare("INSERT INTO emailtext (code, etext, emailactive) VALUES (?, ?, 1)");
+            $stmt->execute([$code, $etext]);
             $successmsg = "New template '$code' created successfully.";
         }
     }
@@ -36,7 +39,7 @@ $extra_head = '';
 include("layout_header.php");
 
 // Fetch all templates, grouping by ID to ensure we get all unique ones
-$templates_query = mysqli_query($con, "SELECT * FROM emailtext ORDER BY id ASC");
+$templates = mlmp_pdo_fetch_all($pdo, "SELECT * FROM emailtext ORDER BY id ASC");
 ?>
 
 <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6">
@@ -85,7 +88,7 @@ $templates_query = mysqli_query($con, "SELECT * FROM emailtext ORDER BY id ASC")
 </div>
 
 <!-- List Existing Templates -->
-<?php while($row = mysqli_fetch_assoc($templates_query)): ?>
+<?php foreach($templates as $row): ?>
     <div class="bg-white border border-slate-200 shadow-sm rounded-2xl shadow-xl flex flex-col overflow-hidden mb-6">
         <form action="?route=admin.settings.email.update" method="post">
             <input type="hidden" name="action" value="update">
@@ -118,6 +121,6 @@ $templates_query = mysqli_query($con, "SELECT * FROM emailtext ORDER BY id ASC")
             </div>
         </form>
     </div>
-<?php endwhile; ?>
+<?php endforeach; ?>
 
 <?php include("layout_footer.php"); ?>

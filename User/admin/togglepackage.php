@@ -8,22 +8,18 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['pkg_id']) && isset($_POST['action'])) {
+    verify_csrf_token();
     $pkg_id = (int)$_POST['pkg_id'];
     $action = $_POST['action'] === 'activate' ? 1 : 0;
     
     if ($pkg_id > 0) {
-        $stmt = mysqli_prepare($con, "UPDATE packages SET active=? WHERE id=?");
-        if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "ii", $action, $pkg_id);
-            if (mysqli_stmt_execute($stmt)) {
-                $status_msg = $action === 1 ? "Package Activated Successfully!" : "Package Deactivated Successfully!";
-                $_SESSION['package_message'] = $status_msg;
-            } else {
-                $_SESSION['package_message'] = "Error updating package status.";
-            }
-            mysqli_stmt_close($stmt);
-        } else {
-            $_SESSION['package_message'] = "Database error.";
+        try {
+            $stmt = $pdo->prepare("UPDATE packages SET active = ? WHERE id = ?");
+            $stmt->execute([$action, $pkg_id]);
+            $status_msg = $action === 1 ? "Package Activated Successfully!" : "Package Deactivated Successfully!";
+            $_SESSION['package_message'] = $status_msg;
+        } catch (PDOException $e) {
+            $_SESSION['package_message'] = "Error updating package status.";
         }
     } else {
         $_SESSION['package_message'] = "Invalid package ID.";

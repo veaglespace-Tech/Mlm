@@ -146,6 +146,7 @@ $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");
                                     </a>
                                     
                                     <form action="togglepackage.php" method="post" class="flex-1">
+                                        <?php echo csrf_field(); ?>
                                         <input type="hidden" name="pkg_id" value="<?php echo $id; ?>">
                                         <?php if($active): ?>
                                             <input type="hidden" name="action" value="deactivate">
@@ -170,6 +171,7 @@ $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");
             <div class="tab-pane" id="create">
                 <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 max-w-4xl mx-auto">
                     <form action="createpac.php" method="post" class="flex flex-col gap-6">
+                        <?php echo csrf_field(); ?>
                         
                         <!-- Core Details -->
                         <div class="mb-2 border-b border-slate-100 pb-2">
@@ -210,11 +212,10 @@ $packages = mlmp_pdo_fetch_all($pdo, "SELECT * FROM packages ORDER BY id ASC");
                                 <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Currency</label>
                                 <select name="currency" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all h-[42px]" required>
                                     <?php 
-                                    $query = "SELECT id, name, code FROM currency"; 
-                                    $result = mysqli_query($con, $query);
-                                    while ($row = mysqli_fetch_array($result)) {
-                                        $curname = $row['name'];
-                                        $curcode = $row['code'];
+                                    $currencies = mlmp_pdo_fetch_all($pdo, "SELECT id, name, code FROM currency");
+                                    foreach ($currencies as $row) {
+                                        $curname = htmlspecialchars($row['name'] ?? '', ENT_QUOTES, 'UTF-8');
+                                        $curcode = htmlspecialchars($row['code'] ?? '', ENT_QUOTES, 'UTF-8');
                                         print "<option value='$curcode' class='bg-white'>$curname - $curcode</option>";
                                     }
                                     ?>

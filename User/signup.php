@@ -32,6 +32,7 @@ $country = $_POST['country'] ?? $_SESSION['signup_data']['country'] ?? '';
 
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username']))
 {
+    verify_csrf_token();
     $status = "OK";
     $msg = "";
 
@@ -384,6 +385,7 @@ html, body {
 
         <!-- Form Container -->
         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" id="signupForm" class="space-y-5">
+          <?php echo csrf_field(); ?>
           
           <!-- Grid layout for input fields -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

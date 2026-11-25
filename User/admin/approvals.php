@@ -177,6 +177,7 @@ function build_approvals_query($override = []) {
                                 <td class="p-4 text-right whitespace-nowrap">
                                     <div class="flex gap-2 justify-end">
                                         <form action="approve_user.php" method="POST" class="inline">
+                                            <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="approve">
                                             <input type="hidden" name="username" value="<?php echo htmlspecialchars($user['username']); ?>">
                                             <button type="submit" onclick="return confirm('Are you sure you want to APPROVE this user? This will place them in the network.');" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 py-1.5 px-3 text-xs font-bold rounded-lg transition-colors shadow-sm">
@@ -184,6 +185,7 @@ function build_approvals_query($override = []) {
                                             </button>
                                         </form>
                                         <form action="approve_user.php" method="POST" class="inline">
+                                            <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="reject">
                                             <input type="hidden" name="username" value="<?php echo htmlspecialchars($user['username']); ?>">
                                             <button type="submit" onclick="return confirm('Are you sure you want to REJECT and DELETE this user?');" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-1.5 px-3 text-xs font-bold rounded-lg transition-colors shadow-sm">

@@ -9,8 +9,9 @@ header( "refresh:1;url=notifications.php" );
 $status = "OK"; //initial status
 $msg="";
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-$nhead=mysqli_real_escape_string($con,$_POST['notihead'] ?? ''); //fetching details through post method
-$nbody = mysqli_real_escape_string($con,$_POST['notibody'] ?? '');
+verify_csrf_token();
+$nhead = trim($_POST['notihead'] ?? ''); //fetching details through post method
+$nbody = trim($_POST['notibody'] ?? '');
 
 if ( strlen($nhead) < 2 ){
 $msg=$msg."Subject Should Have Minimum 2 Characters.<BR>";
@@ -22,12 +23,11 @@ $status= "NOTOK";}
 
 if($status=="OK")
 {
-$stmt = mysqli_prepare($con, "INSERT INTO notifications (subject, body, posteddate, valid) VALUES (?, ?, NOW(), 1)");
-$res1 = false;
-if ($stmt) {
-mysqli_stmt_bind_param($stmt, "ss", $nhead, $nbody);
-$res1 = mysqli_stmt_execute($stmt);
-mysqli_stmt_close($stmt);
+try {
+    $stmt = $pdo->prepare("INSERT INTO notifications (subject, body, posteddate, valid) VALUES (?, ?, NOW(), 1)");
+    $res1 = $stmt->execute([$nhead, $nbody]);
+} catch (PDOException $e) {
+    $res1 = false;
 }
 
 if($res1)

@@ -20,9 +20,8 @@ include("layout_header.php");
 ensure_settings_referral_schema($pdo);
 
 // Fetch settings
-$query = "SELECT * FROM settings LIMIT 1";
-$result = mysqli_query($con, $query);
-if ($row = mysqli_fetch_array($result)) {
+$row = mlmp_pdo_fetch($pdo, "SELECT * FROM settings LIMIT 1");
+if ($row) {
     $email = $row['email'];
     $wlink = $row['wlink'];
     $ide = $row['invoicedetails'];
@@ -54,13 +53,33 @@ if ($row = mysqli_fetch_array($result)) {
 $gateway_paypal_row = mlmp_pdo_fetch($pdo, "SELECT status FROM paymentgateway WHERE id = 1");
 $alwdpaypal = $gateway_paypal_row['status'] ?? 0;
 
+$smtp_test_result = null;
+if (isset($_GET['test_smtp']) && $_GET['test_smtp'] == '1') {
+    include_once("../smtp_helper.php");
+    $test_client = new MLMP_SMTP($smtp_host, $smtp_port, $smtp_username, $smtp_password, $smtp_encryption);
+    $test_success = $test_client->send($smtp_username, "MLM Platform SMTP Test", "<p>Congratulations! Your SMTP settings on MLM Platform are configured correctly and active.</p>", "MLM Platform Test", $email);
+    if ($test_success) {
+        $smtp_test_result = ['status' => 'success', 'msg' => 'SMTP Connected Successfully! Google accepted your credentials and test email dispatched.'];
+    } else {
+        $lastErr = mlmp_get_last_mail_error();
+        $smtp_test_result = ['status' => 'error', 'msg' => 'SMTP Test Failed: ' . ($lastErr ?: 'Authentication or connection rejected.') . ' (If using Gmail, ensure 2-Step Verification is ON and generate a fresh 16-character App Password at https://myaccount.google.com/apppasswords).'];
+    }
+}
 ?>
+
+<?php if ($smtp_test_result): ?>
+    <div class="<?php echo $smtp_test_result['status'] === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700' : 'bg-red-500/10 border-red-500/20 text-red-700'; ?> border rounded-xl p-4 mb-6 font-semibold flex items-center gap-2">
+        <i class="fa-solid <?php echo $smtp_test_result['status'] === 'success' ? 'fa-circle-check text-emerald-600' : 'fa-triangle-exclamation text-red-600'; ?>"></i>
+        <span><?php echo htmlspecialchars($smtp_test_result['msg']); ?></span>
+    </div>
+<?php endif; ?>
 
 <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6">
     <p class="text-sm text-blue-700">Welcome to the Platform Settings Room. declutter and manage core platform behaviors, PayU payment gateways, and system parameters here.</p>
 </div>
 
 <form action="updategensettings.php" method="post" class="flex flex-col gap-6 mb-10">
+    <?php echo csrf_field(); ?>
     <input type="hidden" value="<?php print $sno ?>" name="sno">
 
     <!-- Card 1: General Platform Configurations -->
@@ -190,6 +209,13 @@ $alwdpaypal = $gateway_paypal_row['status'] ?? 0;
                     <option value="ssl" <?php if ($smtp_encryption == 'ssl') echo 'selected'; ?> class="bg-white">SSL (Port 465)</option>
                     <option value="none" <?php if ($smtp_encryption == 'none' || empty($smtp_encryption)) echo 'selected'; ?> class="bg-white">None</option>
                 </select>
+            </div>
+
+            <div class="pt-3 mt-1 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                <a href="gensettings.php?test_smtp=1" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md shadow-indigo-500/20 transition-all">
+                    <i class="fa-solid fa-paper-plane"></i> Test SMTP Connection Now
+                </a>
+                <span class="text-xs text-slate-500 italic">Save changes first before running live test.</span>
             </div>
         </div>
     </div>

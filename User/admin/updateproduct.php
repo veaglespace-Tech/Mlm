@@ -13,24 +13,24 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
-    $id = (int)$_POST['uproduct'];
+    verify_csrf_token();
+    $id = (int)($_POST['uproduct'] ?? 0);
     
     // Fetch existing product data
-    $q = mysqli_query($con, "SELECT name, description, icon, emoji FROM products WHERE id=$id");
-    $existing = mysqli_fetch_assoc($q);
+    $existing = mlmp_pdo_fetch($pdo, "SELECT name, description, icon, emoji FROM products WHERE id = ?", [$id]);
     
     if($existing) {
-        $prodname = !empty($_POST['prodname']) ? mysqli_real_escape_string($con, $_POST['prodname']) : $existing['name'];
-        $proddetail = !empty($_POST['proddetail']) ? mysqli_real_escape_string($con, $_POST['proddetail']) : $existing['description'];
-        $prodicon = !empty($_POST['prodicon']) ? mysqli_real_escape_string($con, $_POST['prodicon']) : $existing['icon'];
-        $prodemoji = !empty($_POST['prodemoji']) ? mysqli_real_escape_string($con, $_POST['prodemoji']) : $existing['emoji'];
+        $prodname = !empty($_POST['prodname']) ? trim($_POST['prodname']) : $existing['name'];
+        $proddetail = !empty($_POST['proddetail']) ? trim($_POST['proddetail']) : $existing['description'];
+        $prodicon = !empty($_POST['prodicon']) ? trim($_POST['prodicon']) : $existing['icon'];
+        $prodemoji = !empty($_POST['prodemoji']) ? trim($_POST['prodemoji']) : $existing['emoji'];
 
-        $query = "UPDATE products SET name='$prodname', description='$proddetail', icon='$prodicon', emoji='$prodemoji' WHERE id=$id";
-        
-        if(mysqli_query($con, $query)) {
+        try {
+            $stmt = $pdo->prepare("UPDATE products SET name = ?, description = ?, icon = ?, emoji = ? WHERE id = ?");
+            $stmt->execute([$prodname, $proddetail, $prodicon, $prodemoji, $id]);
             $_SESSION['product_message'] = "Success: Product updated successfully!";
-        } else {
-            $_SESSION['product_message'] = "Error: Failed to update product. " . mysqli_error($con);
+        } catch (PDOException $e) {
+            $_SESSION['product_message'] = "Error: Failed to update product.";
         }
     } else {
         $_SESSION['product_message'] = "Error: Product not found.";

@@ -20,12 +20,11 @@ print "<center>Invalid user<br/>Redirecting in 2 seconds...</center>";
 exit;
 }
 
-$stmt = mysqli_prepare($con, "UPDATE affiliateuser SET active=0 WHERE username=?");
-$result = false;
-if ($stmt) {
-mysqli_stmt_bind_param($stmt, "s", $tomake);
-$result = mysqli_stmt_execute($stmt);
-mysqli_stmt_close($stmt);
+try {
+    $stmt = $pdo->prepare("UPDATE affiliateuser SET active = 0 WHERE username = ?");
+    $result = $stmt->execute([$tomake]);
+} catch (PDOException $e) {
+    $result = false;
 }
 if ($result)
 {

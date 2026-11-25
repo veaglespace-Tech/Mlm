@@ -101,6 +101,7 @@ function googleTranslateElementInit() {
 
         <!-- Form Container -->
         <form action="forgotpasswordck.php" method="post" class="space-y-6">
+          <?php echo csrf_field(); ?>
           
           <!-- E-Mail Input -->
           <div class="space-y-2">

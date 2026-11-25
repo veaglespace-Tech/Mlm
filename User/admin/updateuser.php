@@ -111,6 +111,7 @@ include("layout_header.php");
 </div>
 
 <form action="updateusersettings.php" method="post" class="flex flex-col gap-6 mb-10">
+    <?php echo csrf_field(); ?>
     <input type="hidden" value="<?php print mlmp_escape($id); ?>" name="pckmainid">
     <input type="hidden" value="<?php print mlmp_escape($toupdate); ?>" name="username">
 

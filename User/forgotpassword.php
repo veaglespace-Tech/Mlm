@@ -6,6 +6,7 @@ include_once("smtp_helper.php");
 
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['femail']))
 {
+    verify_csrf_token();
 
 $email = strtolower(trim($_POST['femail'] ?? ''));
 $status=1;
@@ -313,6 +314,7 @@ function googleTranslateElementInit() {
 
         <!-- Form Container -->
         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-6">
+          <?php echo csrf_field(); ?>
           
           <!-- E-mail Input -->
           <div class="space-y-2">

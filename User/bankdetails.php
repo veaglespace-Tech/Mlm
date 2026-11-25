@@ -21,6 +21,7 @@ $username = $_SESSION['userid'];
 
 // Process Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_bank'])) {
+    verify_csrf_token();
     $bankname = mlmp_escape($_POST['bankname']);
     $accountname = mlmp_escape($_POST['accountname']);
     $accountno = mlmp_escape($_POST['accountno']);
@@ -64,6 +65,7 @@ $c_accounttype = $user['accounttype']; // 1 = Current, 2 = Savings, 0 = Not set
             </p>
             
             <form action="bankdetails.php" method="post">
+                <?php echo csrf_field(); ?>
                 <div class="dash-row col-2" style="margin-bottom:16px;">
                     <div class="form-group">
                         <label>Bank Name</label>

@@ -8,6 +8,7 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 // Collect the data from post method of form submission // 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+verify_csrf_token();
 $act=$_POST['act'] ?? '';
 $username=$_POST['username'] ?? '';
 $ear=$_POST['earnings'] ?? '';

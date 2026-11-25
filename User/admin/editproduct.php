@@ -67,6 +67,7 @@ include("layout_header.php");
     </div>
     <div class="p-6 flex flex-col gap-4">
         <form action="updateproduct.php" method="post" class="flex flex-col gap-5">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="uproduct" value="<?php echo $prod_id; ?>">
             
             <div>

@@ -20,6 +20,7 @@ $msg = '';
 
 // Handle new ticket creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ticket'])) {
+    verify_csrf_token();
     $subject  = trim($_POST['subject'] ?? '');
     $category = trim($_POST['category'] ?? 'general');
     $priority = trim($_POST['priority'] ?? 'medium');
@@ -209,6 +210,7 @@ function ticket_priority_badge($priority) {
         <h3 class="text-[15px] font-bold text-slate-900">New Ticket</h3>
       </div>
       <form method="POST" class="p-5 space-y-4">
+        <?php echo csrf_field(); ?>
         <input type="hidden" name="create_ticket" value="1">
         
         <div>

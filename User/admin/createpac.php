@@ -16,6 +16,7 @@ function redirect_with_message($message) {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect_with_message("Invalid request.");
 }
+verify_csrf_token();
 
 ensure_package_schema($pdo);
 

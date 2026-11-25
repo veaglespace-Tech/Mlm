@@ -5,6 +5,7 @@ include_once('../password_helper.php');
 $status = "OK"; //initial status
 $msg="";
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+verify_csrf_token();
 $username = trim($_POST['username'] ?? ''); //fetching details through post method
 $password = $_POST['password'] ?? '';
 
@@ -58,7 +59,12 @@ if (($num) == 1) {
         </div>
         <p style='color:#64748b;font-size:12px;line-height:1.4;'>Valid for 10 minutes. If you did not initiate this login, please secure your admin account.</p>
     </div>";
-    @mlmp_send_mail($adminRow['email'] ?? '', $subject, $body);
+    $adminEmail = $adminRow['email'] ?? '';
+    $mail_sent = mlmp_send_mail($adminEmail, $subject, $body);
+
+    $logDir = __DIR__ . '/../../logs';
+    if (!is_dir($logDir)) { @mkdir($logDir, 0777, true); }
+    @file_put_contents($logDir . '/admin_otp.log', "[" . date('Y-m-d H:i:s') . "] ADMIN PORTAL OTP for {$adminEmail}: {$otp} (Mail sent: " . ($mail_sent ? 'YES' : 'NO') . ")\n", FILE_APPEND);
 
     header("Location: ../index.php");
     exit;

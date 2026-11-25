@@ -16,6 +16,7 @@ $status = "OK"; // Initial status
 $msg = "";
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    verify_csrf_token();
     // Fetching details through post method
     $wlink = $_POST['wlink'] ?? '';
     $coname = $_POST['coname'] ?? '';
@@ -147,6 +148,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt3 = $pdo->prepare("UPDATE paymentgateway SET status = ? WHERE id = 4");
             $stmt3->execute([$alwdsolid]);
             
+            // Sync updated SMTP credentials with .env file
+            if (!empty($smtp_host)) { mlmp_update_env_file('SMTP_HOST', $smtp_host); }
+            if (!empty($smtp_port)) { mlmp_update_env_file('SMTP_PORT', $smtp_port); }
+            if (!empty($smtp_username)) { mlmp_update_env_file('SMTP_USERNAME', $smtp_username); mlmp_update_env_file('SMTP_FROM_EMAIL', $smtp_username); }
+            if (!empty($smtp_password)) { mlmp_update_env_file('SMTP_PASSWORD', $smtp_password); }
+            if (!empty($smtp_encryption)) { mlmp_update_env_file('SMTP_ENCRYPTION', $smtp_encryption); }
+            if (isset($smtp_enabled)) { mlmp_update_env_file('SMTP_ENABLED', $smtp_enabled); }
+
             print "System settings updated successfully! Redirecting...";
         } catch (Exception $e) {
             print "An error occurred while updating settings. Please try again. Redirecting...";

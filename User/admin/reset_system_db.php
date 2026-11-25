@@ -7,6 +7,7 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_confirm']) && $_POST['reset_confirm'] === 'YES') {
+    verify_csrf_token();
     try {
         $pdo->beginTransaction();
 
@@ -50,6 +51,7 @@ include("layout_header.php");
     <p class="mb-6"><strong>Only the core Admin account and system settings will be preserved. This action CANNOT be undone!</strong></p>
     
     <form method="POST" action="reset_system_db.php" onsubmit="return confirm('Are you ABSOLUTELY sure you want to permanently delete all data?');">
+        <?php echo csrf_field(); ?>
         <div class="mb-4">
             <label class="block font-bold mb-2">Type "YES" to confirm:</label>
             <input type="text" name="reset_confirm" required class="border border-red-300 rounded px-3 py-2 w-full max-w-xs focus:outline-none focus:ring-1 focus:ring-red-500">

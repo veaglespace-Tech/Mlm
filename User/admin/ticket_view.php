@@ -32,6 +32,7 @@ $msg = '';
 
 // Handle status update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+    verify_csrf_token();
     $new_status = $_POST['new_status'] ?? '';
     $valid_statuses = ['open', 'in_progress', 'resolved', 'closed'];
     if (in_array($new_status, $valid_statuses)) {
@@ -43,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 
 // Handle admin reply
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_reply'])) {
+    verify_csrf_token();
     $message = trim($_POST['message'] ?? '');
     if (strlen($message) >= 3) {
         $stmt = $pdo->prepare("INSERT INTO ticket_replies (ticket_id, sender_type, sender_name, message) VALUES (?, 'admin', ?, ?)");
@@ -142,6 +144,7 @@ $sc = $status_colors[$ticket['status']] ?? 'blue';
     <?php if ($ticket['status'] !== 'closed'): ?>
     <div class="fade-in delay-3 bg-white rounded-2xl border border-slate-200 p-5">
       <form method="POST">
+        <?php echo csrf_field(); ?>
         <input type="hidden" name="send_reply" value="1">
         <label class="block text-xs font-semibold text-slate-600 mb-2"><i class="fa-solid fa-reply text-indigo-500 mr-1"></i> Admin Reply</label>
         <textarea name="message" required rows="4" minlength="3" placeholder="Type your response to the user..."
@@ -177,6 +180,7 @@ $sc = $status_colors[$ticket['status']] ?? 'blue';
 
         <!-- Update Status -->
         <form method="POST">
+        <?php echo csrf_field(); ?>
           <input type="hidden" name="update_status" value="1">
           <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Change Status</label>
           <select name="new_status" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 mb-3">

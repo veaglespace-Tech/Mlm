@@ -118,6 +118,7 @@ $products = mlmp_pdo_fetch_all($pdo, "SELECT * FROM products ORDER BY id ASC");
                                     </a>
                                     
                                     <form action="toggleproduct.php" method="post" class="flex-1">
+                                        <?php echo csrf_field(); ?>
                                         <input type="hidden" name="prod_id" value="<?php echo $id; ?>">
                                         <?php if($active): ?>
                                             <input type="hidden" name="action" value="deactivate">
@@ -142,6 +143,7 @@ $products = mlmp_pdo_fetch_all($pdo, "SELECT * FROM products ORDER BY id ASC");
             <div class="tab-pane" id="create">
                 <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 max-w-2xl mx-auto">
                     <form action="createproduct.php" method="post" class="flex flex-col gap-5">
+                        <?php echo csrf_field(); ?>
                         <div class="mb-2 border-b border-slate-100 pb-2">
                             <h4 class="text-sm font-bold text-slate-900 m-0"><i class="fa-solid fa-plus-circle text-indigo-500 mr-1.5"></i> Add New Product</h4>
                         </div>

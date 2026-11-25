@@ -51,6 +51,7 @@ if (isset($_GET['cancel_otp'])) {
 
 // 2. Resend Admin OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_admin_otp'])) {
+    verify_csrf_token();
     if (isset($_SESSION['admin_otp_pending'])) {
         $otp = str_pad((string)random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         $_SESSION['admin_otp_pending']['otp'] = $otp;
@@ -70,17 +71,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resend_admin_otp'])) 
             </div>
             <p style='color:#64748b;font-size:12px;line-height:1.4;'>Valid for 10 minutes. If you did not initiate this login, please secure your account immediately.</p>
         </div>";
-        @mlmp_send_mail($admin_email, $subject, $body);
+        $mail_sent = mlmp_send_mail($admin_email, $subject, $body);
 
-        $successmsg = "
-        <div class='alert' style='background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3); color: #059669;'>
-            <strong>Code Sent:</strong> A fresh 6-digit verification code has been dispatched to your email.
-        </div>";
+        // Record to internal log
+        $logDir = __DIR__ . '/../logs';
+        if (!is_dir($logDir)) { @mkdir($logDir, 0777, true); }
+        @file_put_contents($logDir . '/admin_otp.log', "[" . date('Y-m-d H:i:s') . "] RESEND OTP for {$admin_email}: {$otp} (Mail sent: " . ($mail_sent ? 'YES' : 'NO') . ")\n", FILE_APPEND);
+
+        if ($mail_sent) {
+            $successmsg = "
+            <div class='alert' style='background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3); color: #059669;'>
+                <strong>Code Sent:</strong> A fresh 6-digit verification code has been dispatched to your email.
+            </div>";
+        } else {
+            $errormsg = "
+            <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                <strong>Email Delivery Failed:</strong> Google SMTP server rejected credentials (535 Bad Credentials). Please update your Gmail App Password in <code>.env</code>.
+            </div>";
+        }
     }
 }
 
 // 3. Verify Admin OTP
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_admin_otp'])) {
+    verify_csrf_token();
     if (!isset($_SESSION['admin_otp_pending'])) {
         $errormsg = "
         <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
@@ -103,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_admin_otp'])) 
             </div>";
         } elseif ($entered_otp === $stored['otp']) {
             // SUCCESSFUL ADMIN LOGIN
+            session_regenerate_id(true);
             $adminUsername = $stored['username'];
             unset($_SESSION['admin_otp_pending']);
             $_SESSION['adminidusername'] = $adminUsername;
@@ -122,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_admin_otp'])) 
 // 4. Initial Login Attempt (Username / Email + Password)
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']) && !isset($_POST['verify_admin_otp']) && !isset($_POST['resend_admin_otp']))
 {
+    verify_csrf_token();
     $login_input = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $status = "OK";
@@ -176,11 +192,29 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username']) && !isset(
                             </div>
                             <p style='color:#64748b;font-size:12px;line-height:1.4;'>This code is valid for 10 minutes. If you did not initiate this login, please immediately review your security credentials.</p>
                         </div>";
-                        @mlmp_send_mail($userRow['email'], $subject, $body);
+                        $mail_sent = mlmp_send_mail($userRow['email'], $subject, $body);
+
+                        // Record to internal log
+                        $logDir = __DIR__ . '/../logs';
+                        if (!is_dir($logDir)) { @mkdir($logDir, 0777, true); }
+                        @file_put_contents($logDir . '/admin_otp.log', "[" . date('Y-m-d H:i:s') . "] LOGIN OTP for {$userRow['email']}: {$otp} (Mail sent: " . ($mail_sent ? 'YES' : 'NO') . ")\n", FILE_APPEND);
+
+                        if ($mail_sent) {
+                            $successmsg = "
+                            <div class='alert' style='background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.3); color: #059669;'>
+                                <strong>Code Sent:</strong> A 6-digit verification code has been dispatched to your email.
+                            </div>";
+                        } else {
+                            $errormsg = "
+                            <div class='alert' style='background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: #dc2626;'>
+                                <strong>Email Delivery Warning:</strong> Could not send email via SMTP server (Google rejected credentials with Bad Credentials). Please check your Gmail App Password in <code>.env</code>.
+                            </div>";
+                        }
 
                         // Card will smoothly render the OTP form on the exact same card!
                     } else {
                         // Member / affiliate user login: DIRECT TO DASHBOARD (no OTP)
+                        session_regenerate_id(true);
                         $_SESSION['username'] = $userRow['username'];
                         header("Location: dashboard.php");
                         exit;
@@ -515,19 +549,9 @@ function googleTranslateElementInit() {
           if (!empty($successmsg)) print $successmsg;
           ?>
 
-          <?php if ($is_localhost && !empty($_SESSION['admin_otp_pending']['otp'])): ?>
-            <div class="mb-5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 text-xs flex items-center justify-between">
-              <span class="flex items-center gap-1.5 font-semibold text-amber-800">
-                <i class="fa-solid fa-key text-amber-600"></i> Dev Mode OTP:
-              </span>
-              <span class="font-mono font-extrabold text-sm tracking-widest bg-white/90 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-amber-300 select-all cursor-pointer" title="Click to fill" onclick="document.getElementById('admin_otp').value=this.innerText.trim()">
-                <?php echo htmlspecialchars($_SESSION['admin_otp_pending']['otp']); ?>
-              </span>
-            </div>
-          <?php endif; ?>
-
           <!-- OTP Form -->
           <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-5">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="verify_admin_otp" value="1">
 
             <div class="space-y-2">
@@ -552,6 +576,7 @@ function googleTranslateElementInit() {
               <i class="fa-solid fa-arrow-left"></i> Back to Login
             </a>
             <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="inline">
+              <?php echo csrf_field(); ?>
               <button type="submit" name="resend_admin_otp" value="1" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-1.5 cursor-pointer border-none bg-transparent p-0">
                 <i class="fa-solid fa-arrows-rotate"></i> Resend Code
               </button>
@@ -575,6 +600,7 @@ function googleTranslateElementInit() {
 
           <!-- Form Container -->
           <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "utf-8"); ?>" method="post" class="space-y-6">
+            <?php echo csrf_field(); ?>
             
             <!-- Username or Email Input -->
             <div class="space-y-2">

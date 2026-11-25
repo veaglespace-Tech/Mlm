@@ -13,19 +13,21 @@ if (!isset($_SESSION['adminidusername'])) {
 }
 
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
-    $prodname = mysqli_real_escape_string($con, $_POST['prodname']);
-    $proddetail = mysqli_real_escape_string($con, $_POST['proddetail']);
-    $prodicon = mysqli_real_escape_string($con, $_POST['prodicon']);
-    $prodemoji = mysqli_real_escape_string($con, $_POST['prodemoji']);
+    verify_csrf_token();
+    $prodname = trim($_POST['prodname'] ?? '');
+    $proddetail = trim($_POST['proddetail'] ?? '');
+    $prodicon = trim($_POST['prodicon'] ?? '');
+    $prodemoji = trim($_POST['prodemoji'] ?? '');
     if(empty($prodemoji)) {
         $prodemoji = "🌟";
     }
 
-    $query = "INSERT INTO products (name, description, icon, emoji, active) VALUES ('$prodname', '$proddetail', '$prodicon', '$prodemoji', 1)";
-    if(mysqli_query($con, $query)) {
+    try {
+        $stmt = $pdo->prepare("INSERT INTO products (name, description, icon, emoji, active) VALUES (?, ?, ?, ?, 1)");
+        $stmt->execute([$prodname, $proddetail, $prodicon, $prodemoji]);
         $_SESSION['product_message'] = "Success: Product '$prodname' created successfully!";
-    } else {
-        $_SESSION['product_message'] = "Error: Failed to create product. " . mysqli_error($con);
+    } catch (PDOException $e) {
+        $_SESSION['product_message'] = "Error: Failed to create product.";
     }
     
     header("Location: productsettings.php");

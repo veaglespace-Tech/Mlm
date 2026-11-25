@@ -84,6 +84,7 @@ include("layout_header.php");
 </div>
 
 <form action="updatepcksettings.php" method="post" class="flex flex-col gap-6 mb-10">
+    <?php echo csrf_field(); ?>
     <input type="hidden" value="<?php echo mlmp_escape($upid); ?>" name="pckmainid">
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -146,6 +146,7 @@ class MLMP_SMTP {
 
         } catch (Exception $e) {
             $this->log("Error: " . $e->getMessage());
+            $GLOBALS['mlmp_mail_last_error'] = $e->getMessage();
             if ($socket) {
                 fclose($socket);
             }
@@ -155,15 +156,23 @@ class MLMP_SMTP {
 }
 
 /**
+ * Returns the last error recorded by mlmp_send_mail.
+ */
+function mlmp_get_last_mail_error() {
+    return $GLOBALS['mlmp_mail_last_error'] ?? '';
+}
+
+/**
  * Global helper function to send email in MLM Platform.
  * Falls back to native mail() if SMTP is not enabled.
  */
 function mlmp_send_mail($to, $subject, $message) {
     global $pdo;
+    $GLOBALS['mlmp_mail_last_error'] = '';
 
     // Load active settings from $_ENV, fallback to DB if needed for wlink
     try {
-        $stmt = $pdo->prepare("SELECT wlink, email FROM settings WHERE sno = 0 LIMIT 1");
+        $stmt = $pdo->prepare("SELECT wlink, email, smtp_enabled, smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption FROM settings WHERE sno = 0 LIMIT 1");
         $stmt->execute();
         $settings = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
@@ -174,23 +183,32 @@ function mlmp_send_mail($to, $subject, $message) {
     $fromEmail = $_ENV['SMTP_FROM_EMAIL'] ?? ($settings['email'] ?? "no-reply@$wlink");
     $fromName = "MLM Platform";
 
-    $smtpEnabled = $_ENV['SMTP_ENABLED'] ?? 0;
+    $smtpEnabled = $_ENV['SMTP_ENABLED'] ?? ($settings['smtp_enabled'] ?? 0);
 
     if ($smtpEnabled == 1) {
         // Use custom SMTP
-        $smtp = new MLMP_SMTP(
-            $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com',
-            $_ENV['SMTP_PORT'] ?? 587,
-            $_ENV['SMTP_USERNAME'] ?? '',
-            $_ENV['SMTP_PASSWORD'] ?? '',
-            $_ENV['SMTP_ENCRYPTION'] ?? 'tls'
-        );
+        // Priority: Use DB settings if configured, fallback to .env
+        $smtpHost = !empty($settings['smtp_host']) ? $settings['smtp_host'] : ($_ENV['SMTP_HOST'] ?? 'smtp.gmail.com');
+        $smtpPort = (int)(!empty($settings['smtp_port']) ? $settings['smtp_port'] : ($_ENV['SMTP_PORT'] ?? 587));
+        $smtpUser = !empty($settings['smtp_username']) ? $settings['smtp_username'] : ($_ENV['SMTP_USERNAME'] ?? '');
+        $smtpPass = !empty($settings['smtp_password']) ? $settings['smtp_password'] : ($_ENV['SMTP_PASSWORD'] ?? '');
+        $smtpEnc  = !empty($settings['smtp_encryption']) ? $settings['smtp_encryption'] : ($_ENV['SMTP_ENCRYPTION'] ?? 'tls');
+
+        $smtp = new MLMP_SMTP($smtpHost, $smtpPort, $smtpUser, $smtpPass, $smtpEnc);
         $success = $smtp->send($to, $subject, $message, $fromEmail, $fromName);
         if ($success) {
             return true;
         } else {
-            // Write logs to temporary file for auditing in case of failure
-            error_log("MLMP SMTP Failed. Logs:\n" . $smtp->getLogs());
+            $logs = $smtp->getLogs();
+            $GLOBALS['mlmp_mail_last_error'] = "SMTP Error: Failed to authenticate or dispatch via $smtpHost:$smtpPort.";
+            error_log("MLMP SMTP Failed. Logs:\n" . $logs);
+            
+            // Write to local mail log for administrative audit
+            $logDir = __DIR__ . '/../logs';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0777, true);
+            }
+            @file_put_contents($logDir . '/mail.log', "[" . date('Y-m-d H:i:s') . "] FAILED to $to | Subject: $subject\nLogs:\n$logs\n\n", FILE_APPEND);
         }
     }
 
@@ -206,6 +224,9 @@ function mlmp_send_mail($to, $subject, $message) {
     $headers .= "From: $fromName <$fromEmail>\r\n";
     $mailResult = @mail($to, $subject, $message, $headers);
     if (!$mailResult) {
+        if (empty($GLOBALS['mlmp_mail_last_error'])) {
+            $GLOBALS['mlmp_mail_last_error'] = "PHP native mail() failed to deliver message to $to.";
+        }
         error_log("MLMP Native Mail Failed. Recipient: $to. Ensure sendmail is configured or SMTP is enabled.");
     }
     return $mailResult;

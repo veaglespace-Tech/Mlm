@@ -43,6 +43,7 @@ $has_bank_details = ($user['bankname'] !== 'Not Available' && $user['accountno']
 
 // Process Withdrawal Request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_withdraw'])) {
+    verify_csrf_token();
     $req_amount = (float)$_POST['amount'];
     
     if (!$has_bank_details) {
@@ -181,6 +182,7 @@ function sort_th_withdraw($key, $label, $cur_sort, $cur_order, $align = 'left') 
                     </div>
                 <?php else: ?>
                     <form action="withdraw.php" method="post">
+                        <?php echo csrf_field(); ?>
                         <div class="mb-4">
                             <label class="block text-sm font-semibold text-slate-700 mb-2">Amount to Withdraw (₹)</label>
                             <input type="number" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" name="amount" min="<?php echo $min_withdraw; ?>" max="<?php echo $available_balance; ?>" step="1" placeholder="Enter amount" required>

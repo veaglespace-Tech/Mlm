@@ -26,6 +26,7 @@ if ($existing_kyc) {
 
 // Handle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_kyc'])) {
+    verify_csrf_token();
     if ($kyc_status === 'approved') {
         $msg = "<div class='bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 p-4 rounded-xl flex items-center gap-3'><i class='fa-solid fa-circle-check'></i> Your KYC is already verified. No further action needed.</div>";
     } elseif ($kyc_status === 'pending') {
@@ -249,6 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_kyc'])) {
       </div>
 
       <form action="kyc.php" method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
+        <?php echo csrf_field(); ?>
         <!-- Personal Information -->
         <div class="space-y-4">
           <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400">1. Identity Information</h3>
